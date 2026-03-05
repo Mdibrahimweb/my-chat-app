@@ -11,15 +11,13 @@ mongoose.connect(uri)
     .then(() => console.log("✅ MongoDB Connected Successfully!"))
     .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// মেসেজ স্কিমা (Schema) - প্রোফাইল পিক (avatar) সহ
+// মেসেজ স্কিমা
 const messageSchema = new mongoose.Schema({
     user: String,
     text: String,
     time: String,
     isFile: Boolean,
     msgId: String,
-    targetId: String,
-    senderId: String,
     avatar: String
 });
 const Message = mongoose.model('Message', messageSchema);
@@ -29,12 +27,12 @@ app.use(express.static('public'));
 let users = {};
 
 io.on('connection', async (socket) => {
-    // পুরনো চ্যাট হিস্ট্রি লোড করা
+    // পুরনো মেসেজ লোড (সর্বশেষ ১০০টি)
     try {
         const history = await Message.find().sort({ _id: 1 }).limit(100);
         socket.emit('load-history', history);
     } catch (err) {
-        console.error("Error fetching history:", err);
+        console.error("History Fetch Error:", err);
     }
 
     socket.on('new-user', data => {
@@ -44,22 +42,18 @@ io.on('connection', async (socket) => {
 
     socket.on('chat-message', async (data) => {
         try {
-            const newMessage = new Message({
-                ...data,
-                senderId: socket.id
-            });
+            const newMessage = new Message(data);
             await newMessage.save();
-            socket.broadcast.emit('chat-message', { ...data, senderId: socket.id });
+            socket.broadcast.emit('chat-message', data);
         } catch (err) {
-            console.error("Message Save Error:", err);
+            console.error("Save Error:", err);
         }
     });
 
-    // পার্মানেন্ট ডিলিট লজিক (DB থেকে মুছে ফেলা)
     socket.on('delete-message', async (msgId) => {
         try {
             await Message.deleteOne({ msgId: msgId });
-            io.emit('message-deleted', msgId); // সবাইকে জানানো
+            io.emit('message-deleted', msgId);
         } catch (err) {
             console.error("Delete Error:", err);
         }
@@ -76,4 +70,4 @@ io.on('connection', async (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+http.listen(PORT, () => console.log(`🚀 Server: http://localhost:${PORT}`));
