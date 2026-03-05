@@ -1,233 +1,166 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Messenger Pro</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<script src="/socket.io/socket.io.js"></script>
-
-<style>
-
-#chat-window{
-height:calc(100vh - 130px);
-overflow-y:auto;
-}
-
-.my-msg{
-flex-direction:row-reverse;
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Pro - ইব্রাহীম & লিপা</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        #chat-window { height: calc(100vh - 140px); }
+        .glass { backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.85); }
+        @media (max-width: 768px) {
+            #sidebar { display: none; position: absolute; z-index: 50; width: 100%; height: 100%; }
+            #sidebar.active { display: flex; }
+        }
+    </style>
 </head>
+<body class="bg-gray-100 font-sans h-screen flex overflow-hidden">
 
-<body class="bg-gray-100 flex flex-col h-screen">
-
-<header class="bg-green-600 text-white p-4 text-center font-bold">
-
-ইব্রাহীম & লিপা Messenger
-
-<p id="typing-status" class="text-sm"></p>
-
-</header>
-
-
-<div id="chat-window" class="flex flex-col p-3 gap-3"></div>
-
-
-<form id="chat-form" class="flex gap-2 p-3 bg-white">
-
-<input id="msg-input" class="flex-1 border p-2 rounded" placeholder="মেসেজ লিখুন">
-
-<input type="file" id="file-input">
-
-<button class="bg-green-600 text-white px-4 rounded">
-
-Send
-
-</button>
-
-</form>
-
-
-<script>
-
-const socket = io();
-
-const chatWindow = document.getElementById("chat-window");
-
-const msgInput = document.getElementById("msg-input");
-
-const fileInput = document.getElementById("file-input");
-
-let userName = localStorage.getItem("user") || prompt("আপনার নাম");
-
-localStorage.setItem("user",userName);
-
-socket.emit("new-user",{name:userName});
-
-
-function appendMessage(user,msg,time,isMe,isFile,msgId){
-
-const div=document.createElement("div");
-
-div.id="msg-"+msgId;
-
-div.className="flex "+(isMe?"my-msg":"");
-
-let body = isFile
-? `<img src="${msg}" class="max-w-xs rounded">`
-: `<p>${msg}</p>`;
-
-div.innerHTML=`
-
-<div class="bg-white p-3 rounded shadow max-w-xs">
-
-<b>${user}</b>
-
-${body}
-
-<p class="text-xs text-gray-400">${time}</p>
-
-<button onclick="deleteMsg('${msgId}')" class="text-red-500 text-xs">delete</button>
-
+<div id="name-popup" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="glass p-6 rounded-3xl shadow-2xl w-full max-w-sm text-center">
+        <h2 class="text-xl font-bold text-[#075e54] mb-4">প্রোফাইল সেটআপ করুন</h2>
+        <div class="mb-4">
+            <label for="profile-pic-input" class="cursor-pointer">
+                <div id="avatar-preview" class="w-20 h-20 bg-gray-200 rounded-full mx-auto flex items-center justify-center border-2 border-[#128c7e] overflow-hidden">
+                    <i class="fas fa-camera text-gray-400"></i>
+                </div>
+            </label>
+            <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="previewAvatar(this)">
+        </div>
+        <div class="flex flex-col gap-3">
+            <button onclick="setIdentity('ইব্রাহীম')" class="bg-[#128c7e] text-white p-3 rounded-xl font-bold">ইব্রাহীম</button>
+            <button onclick="setIdentity('লিপা আক্তার')" class="bg-[#e91e63] text-white p-3 rounded-xl font-bold">লিপা আক্তার</button>
+        </div>
+    </div>
 </div>
 
-`;
-
-chatWindow.appendChild(div);
-
-chatWindow.scrollTop=chatWindow.scrollHeight;
-
-}
-
-
-document.getElementById("chat-form").onsubmit=e=>{
-
-e.preventDefault();
-
-let msg=msgInput.value.trim();
-
-if(msg){
-
-let time=new Date().toLocaleTimeString();
-
-let id=Date.now().toString();
-
-appendMessage("আপনি",msg,time,true,false,id);
-
-socket.emit("chat-message",{
-
-user:userName,
-
-text:msg,
-
-time,
-
-isFile:false,
-
-msgId:id
-
-});
-
-msgInput.value="";
-
-}
-
-};
-
-
-fileInput.onchange=function(){
-
-let file=this.files[0];
-
-let reader=new FileReader();
-
-reader.onload=e=>{
-
-let time=new Date().toLocaleTimeString();
-
-let id=Date.now().toString();
-
-appendMessage("আপনি",e.target.result,time,true,true,id);
-
-socket.emit("chat-message",{
-
-user:userName,
-
-text:e.target.result,
-
-time,
-
-isFile:true,
-
-msgId:id
-
-});
-
-};
-
-reader.readAsDataURL(file);
-
-};
-
-
-socket.on("chat-message",data=>{
-
-appendMessage(data.user,data.text,data.time,false,data.isFile,data.msgId);
-
-});
-
-
-socket.on("load-history",history=>{
-
-history.forEach(m=>{
-
-appendMessage(m.user,m.text,m.time,false,m.isFile,m.msgId);
-
-});
-
-});
-
-
-function deleteMsg(id){
-
-socket.emit("delete-message",id);
-
-}
-
-socket.on("message-deleted",id=>{
-
-document.getElementById("msg-"+id)?.remove();
-
-});
-
-
-msgInput.oninput=()=>{
-
-socket.emit("typing",{user:userName});
-
-};
-
-socket.on("display-typing",data=>{
-
-document.getElementById("typing-status").innerText=data.user+" typing...";
-
-setTimeout(()=>{
-
-document.getElementById("typing-status").innerText="";
-
-},2000);
-
-});
-
+<div id="sidebar" class="w-80 bg-white border-r flex flex-col shadow-xl transition-all">
+    <div class="bg-[#ededed] p-4 flex items-center justify-between border-b">
+        <h1 class="font-bold text-[#075e54]">চ্যাট লিস্ট</h1>
+        <button onclick="toggleSidebar()" class="md:hidden text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="user-list" class="flex-1 overflow-y-auto"></div>
+</div>
+
+<div class="flex-1 flex flex-col relative w-full">
+    <div class="bg-[#ededed] p-3 flex items-center gap-3 shadow-sm z-10 border-b">
+        <button onclick="toggleSidebar()" class="md:hidden text-[#128c7e] text-xl px-2"><i class="fas fa-bars"></i></button>
+        <h2 id="current-chat-name" class="font-bold text-gray-800">আমাদের চ্যাট রুম</h2>
+        <p id="typing-status" class="text-[10px] text-green-600 italic ml-auto"></p>
+    </div>
+
+    <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4 bg-[#e5ddd5]"></div>
+
+    <form id="chat-form" class="bg-white p-3 flex gap-2 items-center border-t sticky bottom-0">
+        <input type="file" id="file-input" accept="image/*" class="hidden">
+        <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-400 text-xl px-2"><i class="fas fa-image"></i></button>
+        <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 p-3 bg-gray-100 rounded-full focus:outline-none border border-gray-200 text-sm">
+        <button type="submit" class="bg-[#128c7e] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
+    </form>
+</div>
+
+<audio id="msg-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"></audio>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const chatWindow = document.getElementById('chat-window');
+    const msgInput = document.getElementById('msg-input');
+    const fileInput = document.getElementById('file-input');
+
+    let userName = localStorage.getItem('chat-user') || "";
+    let userAvatar = localStorage.getItem('chat-avatar') || "";
+
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                userAvatar = e.target.result;
+                localStorage.setItem('chat-avatar', userAvatar);
+                document.getElementById('avatar-preview').innerHTML = `<img src="${userAvatar}" class="w-full h-full object-cover">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function setIdentity(name) {
+        userName = name;
+        localStorage.setItem('chat-user', name);
+        document.getElementById("name-popup").style.display = "none";
+        socket.emit('new-user', { name, avatar: userAvatar });
+    }
+
+    if(userName) {
+        document.getElementById("name-popup").style.display = "none";
+        socket.emit('new-user', { name: userName, avatar: userAvatar });
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+
+    // Permanent Delete from DB
+    function deleteMsg(msgId) {
+        if(confirm("মেসেজটি সবার জন্য ডিলিট করতে চান?")) {
+            socket.emit('delete-message', msgId);
+        }
+    }
+
+    socket.on('message-deleted', (msgId) => {
+        const el = document.getElementById(`msg-${msgId}`);
+        if(el) el.remove();
+    });
+
+    socket.on('load-history', history => {
+        chatWindow.innerHTML = '';
+        history.forEach(data => appendMessage(data.user === userName ? 'আপনি' : data.user, data.text, data.time, data.user === userName ? 'self-end' : 'self-start', data.isFile, data.msgId, data.avatar));
+    });
+
+    socket.on('chat-message', data => {
+        appendMessage(data.user, data.text, data.time, 'self-start', data.isFile, data.msgId, data.avatar);
+        document.getElementById('msg-sound').play();
+    });
+
+    function appendMessage(user, content, time, align, isFile, msgId, avatar) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex gap-2 ${align === 'self-end' ? 'flex-row-reverse' : 'flex-row'} items-end mb-2`;
+        wrapper.id = `msg-${msgId}`;
+
+        const avatarImg = avatar ? `<img src="${avatar}" class="w-8 h-8 rounded-full">` : `<div class="w-8 h-8 bg-gray-400 rounded-full"></div>`;
+        const bgColor = align === 'self-end' ? 'bg-[#dcf8c6]' : 'bg-white';
+
+        let body = isFile ? `<img src="${content}" class="rounded-lg max-w-[200px] shadow-sm">` : `<p class="text-sm">${content}</p>`;
+
+        wrapper.innerHTML = `
+            ${avatarImg}
+            <div class="group relative ${bgColor} p-3 rounded-2xl shadow-sm max-w-[75%]">
+                <p class="text-[9px] font-bold text-gray-500 mb-1">${user}</p>
+                ${body}
+                <p class="text-[8px] text-gray-400 text-right mt-1">${time}</p>
+                <div class="absolute -top-2 -right-2 hidden group-hover:flex gap-1">
+                    <button onclick="deleteMsg('${msgId}')" class="bg-white p-1 rounded-full shadow text-red-500 text-[10px]"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        chatWindow.appendChild(wrapper);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    document.getElementById('chat-form').onsubmit = e => {
+        e.preventDefault();
+        const msg = msgInput.value.trim();
+        if(msg) {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const msgId = Date.now().toString();
+            appendMessage('আপনি', msg, time, 'self-end', false, msgId, userAvatar);
+            socket.emit('chat-message', { user: userName, text: msg, time, isFile: false, msgId, avatar: userAvatar });
+            msgInput.value = '';
+        }
+    };
+
+    msgInput.oninput = () => socket.emit('typing', {user: userName});
+    socket.on('display-typing', data => {
+        document.getElementById('typing-status').innerText = `${data.user} টাইপ করছে...`;
+        setTimeout(() => document.getElementById('typing-status').innerText = '', 2000);
+    });
 </script>
-
 </body>
-
 </html>
