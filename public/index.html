@@ -7,56 +7,50 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        #chat-window { height: calc(100vh - 140px); }
+        #chat-window { height: calc(100vh - 130px); scroll-behavior: smooth; }
         .glass { backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.85); }
-        @media (max-width: 768px) {
-            #sidebar { display: none; position: absolute; z-index: 50; width: 100%; height: 100%; }
-            #sidebar.active { display: flex; }
-        }
+        .my-msg { flex-direction: row-reverse; }
+        .others-msg { flex-direction: row; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans h-screen flex overflow-hidden">
+<body class="bg-[#f0f2f5] font-sans h-screen flex overflow-hidden">
 
-<div id="name-popup" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-    <div class="glass p-6 rounded-3xl shadow-2xl w-full max-w-sm text-center">
-        <h2 class="text-xl font-bold text-[#075e54] mb-4">প্রোফাইল সেটআপ করুন</h2>
-        <div class="mb-4">
+<div id="name-popup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div class="glass p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center">
+        <h2 class="text-2xl font-bold text-[#075e54] mb-6">আপনার প্রোফাইল</h2>
+        <div class="mb-6">
             <label for="profile-pic-input" class="cursor-pointer">
-                <div id="avatar-preview" class="w-20 h-20 bg-gray-200 rounded-full mx-auto flex items-center justify-center border-2 border-[#128c7e] overflow-hidden">
-                    <i class="fas fa-camera text-gray-400"></i>
+                <div id="avatar-preview" class="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center border-4 border-[#128c7e] overflow-hidden">
+                    <i class="fas fa-camera text-2xl text-gray-500"></i>
                 </div>
             </label>
             <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="previewAvatar(this)">
         </div>
-        <div class="flex flex-col gap-3">
-            <button onclick="setIdentity('ইব্রাহীম')" class="bg-[#128c7e] text-white p-3 rounded-xl font-bold">ইব্রাহীম</button>
-            <button onclick="setIdentity('লিপা আক্তার')" class="bg-[#e91e63] text-white p-3 rounded-xl font-bold">লিপা আক্তার</button>
+        <div class="grid grid-cols-1 gap-4">
+            <button onclick="setIdentity('ইব্রাহীম')" class="bg-[#128c7e] text-white p-4 rounded-2xl font-bold text-lg shadow-lg hover:scale-105 transition">আমি ইব্রাহীম</button>
+            <button onclick="setIdentity('লিপা আক্তার')" class="bg-[#e91e63] text-white p-4 rounded-2xl font-bold text-lg shadow-lg hover:scale-105 transition">আমি লিপা আক্তার</button>
         </div>
     </div>
 </div>
 
-<div id="sidebar" class="w-80 bg-white border-r flex flex-col shadow-xl transition-all">
-    <div class="bg-[#ededed] p-4 flex items-center justify-between border-b">
-        <h1 class="font-bold text-[#075e54]">চ্যাট লিস্ট</h1>
-        <button onclick="toggleSidebar()" class="md:hidden text-gray-600"><i class="fas fa-times"></i></button>
-    </div>
-    <div id="user-list" class="flex-1 overflow-y-auto"></div>
-</div>
-
-<div class="flex-1 flex flex-col relative w-full">
-    <div class="bg-[#ededed] p-3 flex items-center gap-3 shadow-sm z-10 border-b">
-        <button onclick="toggleSidebar()" class="md:hidden text-[#128c7e] text-xl px-2"><i class="fas fa-bars"></i></button>
-        <h2 id="current-chat-name" class="font-bold text-gray-800">আমাদের চ্যাট রুম</h2>
-        <p id="typing-status" class="text-[10px] text-green-600 italic ml-auto"></p>
+<div class="flex-1 flex flex-col relative w-full h-full">
+    <div class="bg-white/80 backdrop-blur-md p-4 flex items-center justify-between shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#128c7e] rounded-full flex items-center justify-center text-white"><i class="fas fa-heart"></i></div>
+            <div>
+                <h2 class="font-bold text-gray-800">ইব্রাহীম ❤️ লিপা</h2>
+                <p id="typing-status" class="text-xs text-green-600 h-4 font-medium"></p>
+            </div>
+        </div>
     </div>
 
     <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4 bg-[#e5ddd5]"></div>
 
-    <form id="chat-form" class="bg-white p-3 flex gap-2 items-center border-t sticky bottom-0">
+    <form id="chat-form" class="bg-white p-3 flex gap-2 items-center border-t shadow-lg sticky bottom-0">
         <input type="file" id="file-input" accept="image/*" class="hidden">
-        <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-400 text-xl px-2"><i class="fas fa-image"></i></button>
-        <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 p-3 bg-gray-100 rounded-full focus:outline-none border border-gray-200 text-sm">
-        <button type="submit" class="bg-[#128c7e] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
+        <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-500 text-2xl p-2 hover:text-[#128c7e]"><i class="fas fa-image"></i></button>
+        <input id="msg-input" type="text" autocomplete="off" placeholder="মেসেজ লিখুন..." class="flex-1 p-3 bg-gray-100 rounded-full focus:outline-none border-none text-sm">
+        <button type="submit" class="bg-[#128c7e] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition"><i class="fas fa-paper-plane"></i></button>
     </form>
 </div>
 
@@ -96,48 +90,42 @@
         socket.emit('new-user', { name: userName, avatar: userAvatar });
     }
 
-    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-
-    // Permanent Delete from DB
     function deleteMsg(msgId) {
-        if(confirm("মেসেজটি সবার জন্য ডিলিট করতে চান?")) {
+        if(confirm("মেসেজটি কি চিরতরে ডিলিট করতে চান?")) {
             socket.emit('delete-message', msgId);
         }
     }
 
-    socket.on('message-deleted', (msgId) => {
-        const el = document.getElementById(`msg-${msgId}`);
-        if(el) el.remove();
-    });
+    socket.on('message-deleted', (id) => { document.getElementById(`msg-${id}`)?.remove(); });
 
     socket.on('load-history', history => {
         chatWindow.innerHTML = '';
-        history.forEach(data => appendMessage(data.user === userName ? 'আপনি' : data.user, data.text, data.time, data.user === userName ? 'self-end' : 'self-start', data.isFile, data.msgId, data.avatar));
+        history.forEach(d => appendMessage(d.user === userName ? 'আপনি' : d.user, d.text, d.time, d.user === userName, d.isFile, d.msgId, d.avatar));
     });
 
-    socket.on('chat-message', data => {
-        appendMessage(data.user, data.text, data.time, 'self-start', data.isFile, data.msgId, data.avatar);
+    socket.on('chat-message', d => {
+        appendMessage(d.user, d.text, d.time, false, d.isFile, d.msgId, d.avatar);
         document.getElementById('msg-sound').play();
     });
 
-    function appendMessage(user, content, time, align, isFile, msgId, avatar) {
+    function appendMessage(user, content, time, isMe, isFile, msgId, avatar) {
         const wrapper = document.createElement('div');
-        wrapper.className = `flex gap-2 ${align === 'self-end' ? 'flex-row-reverse' : 'flex-row'} items-end mb-2`;
         wrapper.id = `msg-${msgId}`;
+        wrapper.className = `flex gap-2 ${isMe ? 'my-msg' : 'others-msg'} items-end`;
 
-        const avatarImg = avatar ? `<img src="${avatar}" class="w-8 h-8 rounded-full">` : `<div class="w-8 h-8 bg-gray-400 rounded-full"></div>`;
-        const bgColor = align === 'self-end' ? 'bg-[#dcf8c6]' : 'bg-white';
+        const avatarImg = avatar ? `<img src="${avatar}" class="w-8 h-8 rounded-full border shadow-sm">` : `<div class="w-8 h-8 bg-gray-400 rounded-full"></div>`;
+        const bgColor = isMe ? 'bg-[#dcf8c6]' : 'bg-white';
 
-        let body = isFile ? `<img src="${content}" class="rounded-lg max-w-[200px] shadow-sm">` : `<p class="text-sm">${content}</p>`;
+        let body = isFile ? `<img src="${content}" class="rounded-xl max-w-[220px] shadow-sm">` : `<p class="text-sm text-gray-800">${content}</p>`;
 
         wrapper.innerHTML = `
             ${avatarImg}
-            <div class="group relative ${bgColor} p-3 rounded-2xl shadow-sm max-w-[75%]">
-                <p class="text-[9px] font-bold text-gray-500 mb-1">${user}</p>
+            <div class="group relative ${bgColor} p-3 rounded-2xl shadow-sm max-w-[75%] border border-black/5">
+                <p class="text-[9px] font-bold ${isMe ? 'text-[#075e54]' : 'text-[#e91e63]'} mb-1">${user}</p>
                 ${body}
                 <p class="text-[8px] text-gray-400 text-right mt-1">${time}</p>
-                <div class="absolute -top-2 -right-2 hidden group-hover:flex gap-1">
-                    <button onclick="deleteMsg('${msgId}')" class="bg-white p-1 rounded-full shadow text-red-500 text-[10px]"><i class="fas fa-trash"></i></button>
+                <div class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="deleteMsg('${msgId}')" class="bg-white p-1 rounded-full shadow-md text-red-500 text-[10px] border"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
         chatWindow.appendChild(wrapper);
@@ -150,9 +138,23 @@
         if(msg) {
             const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const msgId = Date.now().toString();
-            appendMessage('আপনি', msg, time, 'self-end', false, msgId, userAvatar);
+            appendMessage('আপনি', msg, time, true, false, msgId, userAvatar);
             socket.emit('chat-message', { user: userName, text: msg, time, isFile: false, msgId, avatar: userAvatar });
             msgInput.value = '';
+        }
+    };
+
+    fileInput.onchange = function() {
+        const file = this.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const msgId = Date.now().toString();
+                appendMessage('আপনি', e.target.result, time, true, true, msgId, userAvatar);
+                socket.emit('chat-message', { user: userName, text: e.target.result, time, isFile: true, msgId, avatar: userAvatar });
+            };
+            reader.readAsDataURL(file);
         }
     };
 
