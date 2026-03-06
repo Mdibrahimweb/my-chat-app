@@ -1,165 +1,82 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Pro | Ibrahim & Lipa</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { height: 100dvh; background: #f0f2f5; font-family: sans-serif; }
-        #chat-window { background: #e5ddd5 url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); scroll-behavior: smooth; }
-        .msg-bubble { max-width: 85%; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    </style>
-</head>
-<body class="flex flex-col md:flex-row overflow-hidden">
+const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http, { maxHttpBufferSize: 1e8, cors: { origin: "*" } });
+const mongoose = require('mongoose');
 
-    <div id="auth-screen" class="fixed inset-0 z-[500] bg-white flex items-center justify-center p-4">
-        <div class="max-w-md w-full p-8 rounded-3xl shadow-xl text-center space-y-4 border">
-            <h1 class="text-3xl font-bold text-[#128c7e]">Messenger Pro</h1>
-            <input id="auth-user" type="text" placeholder="ইউজারনেম" class="w-full p-3 border rounded-xl outline-none">
-            <input id="auth-pass" type="password" placeholder="পাসওয়ার্ড" class="w-full p-3 border rounded-xl outline-none">
-            <button onclick="handleAuth('login')" class="w-full bg-[#128c7e] text-white p-3 rounded-xl font-bold">লগইন</button>
-            <button onclick="handleAuth('register')" class="text-sm text-gray-500">নতুন অ্যাকাউন্ট তৈরি</button>
-        </div>
-    </div>
+const uri = "mongodb+srv://nid-server:Ibrahim9250@cluster0.9jxg3wa.mongodb.net/messengerDB?retryWrites=true&w=majority";
+mongoose.connect(uri).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log(err));
 
-    <div class="w-full md:w-72 bg-white border-r flex flex-col hidden md:flex">
-        <div class="p-4 bg-[#075e54] text-white font-bold flex justify-between">
-            <span>অনলাইন</span>
-            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
-        <div id="user-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
-    </div>
+// --- স্কিমা সমূহ ---
+const userSchema = new mongoose.Schema({
+    username: { type: String, unique: true },
+    password: { type: String }, // এখানে চাইলে হ্যাশ ব্যবহার করতে পারেন
+    avatar: String,
+    role: { type: String, default: 'user' }, // 'admin' বা 'user'
+    isBanned: { type: Boolean, default: false }
+});
+const User = mongoose.model('User', userSchema);
 
-    <div class="flex-1 flex flex-col h-full">
-        <header class="h-14 bg-[#075e54] text-white flex items-center px-4 gap-3 shrink-0">
-            <img id="my-avatar" src="" class="w-10 h-10 rounded-full border object-cover">
-            <div>
-                <h2 id="my-name" class="font-bold text-sm">...</h2>
-                <p id="typing-status" class="text-[10px] text-green-300 italic"></p>
-            </div>
-        </header>
+const messageSchema = new mongoose.Schema({
+    user: String, text: String, time: String, isFile: Boolean,
+    msgId: { type: String, unique: true }, avatar: String,
+    replyTo: { type: String, default: null }, status: { type: String, default: 'sent' }
+});
+const Message = mongoose.model('Message', messageSchema);
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col"></div>
+app.use(express.static('public'));
+app.use(express.json());
 
-        <div class="p-3 bg-gray-100 border-t">
-            <form id="chat-form" class="flex gap-2">
-                <button type="button" onclick="document.getElementById('img-send').click()" class="px-2 text-gray-600"><i class="fas fa-image text-xl"></i></button>
-                <input type="file" id="img-send" hidden accept="image/*" onchange="sendImage(this)">
-                <input id="msg-input" type="text" placeholder="মেসেজ..." class="flex-1 p-2 rounded-full outline-none px-4" oninput="notifyTyping()">
-                <button type="submit" class="bg-[#128c7e] text-white w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-paper-plane"></i></button>
-            </form>
-        </div>
-    </div>
+// --- লগইন এবং প্রোফাইল API ---
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username, password });
+    if (user) {
+        if (user.isBanned) return res.status(403).json({ error: "আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে!" });
+        res.json(user);
+    } else {
+        res.status(401).json({ error: "ভুল ইউজারনেম বা পাসওয়ার্ড!" });
+    }
+});
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let currentUser = JSON.parse(localStorage.getItem('user-session'));
+app.post('/api/register', async (req, res) => {
+    try {
+        const newUser = new User(req.body);
+        await newUser.save();
+        res.json(newUser);
+    } catch (e) { res.status(400).json({ error: "ইউজারনেমটি আগে থেকেই আছে!" }); }
+});
 
-        if (currentUser) {
-            document.getElementById('auth-screen').classList.add('hidden');
-            initApp();
-        }
+// --- সকেট লজিক ---
+let onlineUsers = {};
 
-        async function compressImage(base64, size = 400) {
-            return new Promise(res => {
-                const img = new Image();
-                img.src = base64;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ratio = Math.min(size / img.width, size / img.height);
-                    canvas.width = img.width * ratio;
-                    canvas.height = img.height * ratio;
-                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                    res(canvas.toDataURL('image/jpeg', 0.6)); // কোয়ালিটি ৬০%
-                }
-            });
-        }
+io.on('connection', (socket) => {
+    socket.on('new-user', async (userData) => {
+        onlineUsers[socket.id] = userData;
+        io.emit('user-list', Object.values(onlineUsers));
+        
+        // হিস্ট্রি লোড
+        const history = await Message.find().sort({ _id: -1 }).limit(100);
+        socket.emit('load-history', history.reverse());
+    });
 
-        async function handleAuth(type) {
-            const username = document.getElementById('auth-user').value;
-            const password = document.getElementById('auth-pass').value;
-            const res = await fetch(`/api/${type}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            localStorage.setItem('user-session', JSON.stringify(data));
-            location.reload();
-        }
+    socket.on('chat-message', async (data) => {
+        const newMessage = new Message(data);
+        await newMessage.save();
+        socket.broadcast.emit('chat-message', data);
+    });
 
-        function initApp() {
-            document.getElementById('my-name').innerText = currentUser.username;
-            document.getElementById('my-avatar').src = currentUser.avatar;
-            socket.emit('new-user', currentUser);
-        }
+    // অ্যাডমিন ফিচার: ইউজার ব্যান করা
+    socket.on('admin-ban-user', async (username) => {
+        await User.updateOne({ username }, { isBanned: true });
+        io.emit('user-banned', username);
+    });
 
-        function appendMessage(data, isSelf) {
-            const win = document.getElementById('chat-window');
-            const div = document.createElement('div');
-            div.className = `flex ${isSelf ? 'justify-end' : 'justify-start'}`;
-            div.innerHTML = `
-                <div class="msg-bubble rounded-2xl ${isSelf ? 'bg-[#dcf8c6] text-right' : 'bg-white'}">
-                    <p class="text-[9px] font-bold opacity-50">${data.user}</p>
-                    ${data.isFile ? `<img src="${data.text}" class="rounded-lg max-w-[200px]">` : `<p class="text-sm">${data.text}</p>`}
-                    <p class="text-[8px] mt-1 opacity-40">${data.time}</p>
-                </div>`;
-            win.appendChild(div);
-            win.scrollTop = win.scrollHeight;
-        }
+    socket.on('disconnect', () => {
+        delete onlineUsers[socket.id];
+        io.emit('user-list', Object.values(onlineUsers));
+    });
+});
 
-        async function sendImage(input) {
-            if (!input.files[0]) return;
-            const reader = new FileReader();
-            reader.onload = async e => {
-                const compressed = await compressImage(e.target.result);
-                const msg = {
-                    user: currentUser.username, text: compressed, isFile: true,
-                    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                    msgId: Date.now().toString(), avatar: currentUser.avatar
-                };
-                appendMessage(msg, true);
-                socket.emit('chat-message', msg);
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-
-        document.getElementById('chat-form').onsubmit = e => {
-            e.preventDefault();
-            const val = document.getElementById('msg-input').value;
-            if (!val) return;
-            const msg = {
-                user: currentUser.username, text: val, isFile: false,
-                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                msgId: Date.now().toString(), avatar: currentUser.avatar
-            };
-            appendMessage(msg, true);
-            socket.emit('chat-message', msg);
-            document.getElementById('msg-input').value = '';
-        };
-
-        function notifyTyping() { socket.emit('typing', currentUser.username); }
-        socket.on('user-typing', u => {
-            document.getElementById('typing-status').innerText = `${u} টাইপ করছে...`;
-            setTimeout(() => document.getElementById('typing-status').innerText = '', 1500);
-        });
-
-        socket.on('chat-message', d => appendMessage(d, false));
-        socket.on('load-history', h => h.forEach(d => appendMessage(d, d.user === currentUser.username)));
-        socket.on('user-list', list => {
-            document.getElementById('user-list').innerHTML = list.map(u => `
-                <div class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg">
-                    <img src="${u.avatar}" class="w-8 h-8 rounded-full border">
-                    <span class="text-xs font-medium">${u.username}</span>
-                </div>
-            `).join('');
-        });
-
-        function logout() { localStorage.clear(); location.reload(); }
-    </script>
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log(`🚀 Server: http://localhost:${PORT}`));
