@@ -9,16 +9,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { height: 100dvh; background: #e5ddd5; }
+        body { height: 100dvh; background: #e5ddd5; font-family: 'Inter', sans-serif; }
         #chat-window { background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
         .bubble { max-width: 85%; position: relative; border-radius: 12px; }
         .self { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         .other { background: #ffffff; align-self: flex-start; border-top-left-radius: 2px; }
         .menu-btn { display: none; }
         .bubble:hover .menu-btn { display: block; }
-        
-        /* SweetAlert Custom Font */
-        .swal2-popup { font-family: 'Inter', sans-serif !important; border-radius: 20px !important; }
+        .swal2-popup { border-radius: 20px !important; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row overflow-hidden">
@@ -26,9 +24,9 @@
     <div id="auth-modal" class="fixed inset-0 bg-white z-[100] flex items-center justify-center p-6">
         <div class="max-w-md w-full text-center space-y-4">
             <h1 class="text-3xl font-black text-[#128c7e]">MESSENGER PRO <br> Ibrahim & Lipa</h1>
-            <input id="u" type="text" placeholder="ইউজারনেম" class="w-full border p-4 rounded-2xl outline-none">
-            <input id="p" type="password" placeholder="পাসওয়ার্ড" class="w-full border p-4 rounded-2xl outline-none">
-            <button onclick="auth('login')" class="w-full bg-[#128c7e] text-white p-4 rounded-2xl font-bold active:scale-95 transition">লগইন</button>
+            <input id="u" type="text" placeholder="ইউজারনেম" class="w-full border p-4 rounded-2xl outline-none focus:border-[#128c7e]">
+            <input id="p" type="password" placeholder="পাসওয়ার্ড" class="w-full border p-4 rounded-2xl outline-none focus:border-[#128c7e]">
+            <button onclick="auth('login')" class="w-full bg-[#128c7e] text-white p-4 rounded-2xl font-bold active:scale-95 transition shadow-lg">লগইন</button>
             <button onclick="auth('reg')" class="text-gray-500 hover:underline">নতুন অ্যাকাউন্ট তৈরি করুন</button>
         </div>
     </div>
@@ -57,9 +55,7 @@
         <div class="p-3 bg-[#f0f2f5] flex items-center gap-2 border-t">
             <button onclick="document.getElementById('img-in').click()" class="text-gray-600 text-xl px-2 hover:text-green-600"><i class="fas fa-image"></i></button>
             <input type="file" id="img-in" hidden accept="image/*" onchange="sendImg(this)">
-            
             <input id="msg-in" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 bg-white p-3 rounded-full outline-none px-5 shadow-sm" oninput="notifyT()">
-            
             <button onclick="send()" class="bg-[#128c7e] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -71,14 +67,15 @@
         let me = JSON.parse(localStorage.getItem('m-user'));
         let isEdit = false, editId = null;
 
-        // Toast Notification Config
         const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
+            toast: true, position: 'top-end',
+            showConfirmButton: false, timer: 3000, timerProgressBar: true
         });
+
+        // ১. নোটিফিকেশন পারমিশন চাওয়া
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
 
         if (me) { 
             document.getElementById('auth-modal').remove(); 
@@ -88,9 +85,7 @@
 
         async function auth(type) {
             const username = document.getElementById('u').value, pass = document.getElementById('p').value;
-            if(!username || !pass) {
-                return Swal.fire({ icon: 'warning', title: 'উফ!', text: 'ইউজারনেম এবং পাসওয়ার্ড দিন', confirmButtonColor: '#128c7e' });
-            }
+            if(!username || !pass) return Swal.fire({ icon: 'warning', title: 'উফ!', text: 'ইউজারনেম এবং পাসওয়ার্ড দিন' });
 
             const res = await fetch('/api/auth', {
                 method: 'POST',
@@ -98,17 +93,11 @@
                 body: JSON.stringify({ username, pass, type, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' })
             });
             const data = await res.json();
-            
             if (data.username) {
                 localStorage.setItem('m-user', JSON.stringify(data));
-                Swal.fire({
-                    icon: 'success',
-                    title: type === 'login' ? 'স্বাগতম!' : 'অ্যাকাউন্ট তৈরি সফল',
-                    showConfirmButton: false,
-                    timer: 1500
-                }).then(() => location.reload());
+                location.reload();
             } else {
-                Swal.fire({ icon: 'error', title: 'ব্যর্থ!', text: data.error, confirmButtonColor: '#ef4444' });
+                Swal.fire({ icon: 'error', title: 'ব্যর্থ!', text: data.error });
             }
         }
 
@@ -129,18 +118,30 @@
                 </div>`;
             win.appendChild(div);
             win.scrollTop = win.scrollHeight;
+
+            // ২. ব্যাকগ্রাউন্ডে থাকলে নোটিফিকেশন পাঠানো
+            if (!isSelf && document.hidden) {
+                showNotification(u, isImg ? "একটি ছবি পাঠিয়েছেন" : t);
+            }
+        }
+
+        function showNotification(sender, message) {
+            if (Notification.permission === "granted") {
+                const notif = new Notification(`নতুন মেসেজ: ${sender}`, {
+                    body: message,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+                });
+                notif.onclick = () => { window.focus(); notif.close(); };
+            }
         }
 
         function send() {
             const input = document.getElementById('msg-in');
             if (!input.value.trim()) return;
-            const msgId = Date.now().toString();
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+            const msgId = Date.now().toString(), time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             if(isEdit) {
                 socket.emit('edit-msg', { id: editId, newText: input.value });
                 isEdit = false; editId = null;
-                Toast.fire({ icon: 'success', title: 'মেসেজ আপডেট হয়েছে' });
             } else {
                 const data = { user: me.username, text: input.value, time, msgId, isImage: false };
                 append('আপনি', data.text, true, time, msgId, false);
@@ -152,65 +153,36 @@
         function sendImg(input) {
             const file = input.files[0];
             if(!file) return;
-            
             const reader = new FileReader();
             reader.onload = () => {
-                const msgId = Date.now().toString();
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const msgId = Date.now().toString(), time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const data = { user: me.username, text: reader.result, time, msgId, isImage: true };
                 append('আপনি', reader.result, true, time, msgId, true);
                 socket.emit('chat-message', data);
-                Toast.fire({ icon: 'info', title: 'ছবি পাঠানো হয়েছে' });
             };
             reader.readAsDataURL(file);
         }
 
         function delMsg(id) {
             Swal.fire({
-                title: 'আপনি কি নিশ্চিত?',
-                text: "এই মেসেজটি চিরতরে মুছে ফেলা হবে!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#128c7e',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'হ্যাঁ, মুছুন!',
-                cancelButtonText: 'না'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    socket.emit('delete-msg', id);
-                    Toast.fire({ icon: 'success', title: 'মুছে ফেলা হয়েছে' });
-                }
-            });
+                title: 'মুছে ফেলবেন?', text: "এটি আর ফিরে পাওয়া যাবে না!", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#128c7e', confirmButtonText: 'হ্যাঁ, মুছুন'
+            }).then((res) => { if (res.isConfirmed) socket.emit('delete-msg', id); });
         }
 
         function startEdit(id, text) {
-            isEdit = true;
-            editId = id;
+            isEdit = true; editId = id;
             document.getElementById('msg-in').value = text;
             document.getElementById('msg-in').focus();
-            Toast.fire({ icon: 'info', title: 'মেসেজ এডিট মোড চালু' });
+            Toast.fire({ icon: 'info', title: 'এডিট মোড চালু' });
         }
 
         function logout() {
-            Swal.fire({
-                title: 'লগআউট করতে চান?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#075e54',
-                confirmButtonText: 'হ্যাঁ',
-                cancelButtonText: 'না'
-            }).then((res) => {
-                if(res.isConfirmed) {
-                    localStorage.clear();
-                    location.reload();
-                }
-            });
+            Swal.fire({ title: 'লগআউট করতে চান?', icon: 'question', showCancelButton: true, confirmButtonText: 'হ্যাঁ' })
+            .then((res) => { if(res.isConfirmed) { localStorage.clear(); location.reload(); } });
         }
 
-        function viewImg(url) {
-            Swal.fire({ imageUrl: url, imageAlt: 'Image', showConfirmButton: false, background: 'transparent' });
-        }
-
+        function viewImg(url) { Swal.fire({ imageUrl: url, imageAlt: 'Preview', showConfirmButton: false, background: 'transparent' }); }
         function notifyT() { socket.emit('typing', me.username); }
         
         socket.on('user-typing', u => { 
@@ -218,18 +190,11 @@
             setTimeout(() => document.getElementById('t-status').innerText = '', 2000);
         });
 
-        socket.on('chat-message', d => {
-            append(d.user, d.text, false, d.time, d.msgId, d.isImage, d.isEdited);
-        });
-        
+        socket.on('chat-message', d => append(d.user, d.text, false, d.time, d.msgId, d.isImage, d.isEdited));
         socket.on('msg-deleted', id => document.getElementById(`msg-${id}`)?.remove());
-        
         socket.on('msg-edited', ({id, newText}) => { 
             const el = document.getElementById(`t-${id}`);
-            if(el) { 
-                el.innerText = newText;
-                // এডিট হলে ছোট একটা রিফ্রেশ বা আপডেট ইন্ডিকেটর দেওয়া যেতে পারে
-            }
+            if(el) el.innerText = newText;
         });
 
         socket.on('load-history', h => h.forEach(d => append(d.user === me.username ? 'আপনি' : d.user, d.text, d.user === me.username, d.time, d.msgId, d.isImage, d.isEdited)));
@@ -240,9 +205,7 @@
                     <img src="${u.avatar}" class="w-12 h-12 rounded-full border shadow-sm">
                     <div>
                         <div class="font-bold text-sm text-gray-800">${u.username}</div>
-                        <div class="text-[10px] text-green-500 flex items-center gap-1">
-                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> অনলাইন
-                        </div>
+                        <div class="text-[10px] text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> অনলাইন</div>
                     </div>
                 </div>`).join('');
         });
