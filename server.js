@@ -2,14 +2,13 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, { 
-    maxHttpBufferSize: 1e7, // ১০ মেগাবাইট লিমিট
+    maxHttpBufferSize: 1e7, 
     cors: { origin: "*" } 
 });
 const mongoose = require('mongoose');
 
-// MongoDB কানেকশন
 const uri = "mongodb+srv://nid-server:Ibrahim9250@cluster0.9jxg3wa.mongodb.net/messengerDB?retryWrites=true&w=majority";
-mongoose.connect(uri).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log(err));
+mongoose.connect(uri).then(() => console.log("✅ MongoDB Connected")).catch(err => console.error(err));
 
 // স্কিমা
 const userSchema = new mongoose.Schema({
@@ -29,16 +28,16 @@ const messageSchema = new mongoose.Schema({
 const Message = mongoose.model('Message', messageSchema);
 
 app.use(express.static('public'));
-app.use(express.json({ limit: '10mb' })); // বডি লিমিট বাড়ানো হয়েছে
+app.use(express.json({ limit: '10mb' }));
 
-// API সমূহ
+// Auth APIs
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username, password });
     if (user) {
-        if (user.isBanned) return res.status(403).json({ error: "ব্যান করা হয়েছে!" });
+        if (user.isBanned) return res.status(403).json({ error: "ব্যান করা হয়েছে!" });
         res.json(user);
-    } else res.status(401).json({ error: "ভুল ইউজার বা পাসওয়ার্ড!" });
+    } else res.status(401).json({ error: "ভুল তথ্য!" });
 });
 
 app.post('/api/register', async (req, res) => {
@@ -61,7 +60,7 @@ io.on('connection', (socket) => {
     socket.on('new-user', async (userData) => {
         onlineUsers[socket.id] = userData;
         io.emit('user-list', Object.values(onlineUsers));
-        const history = await Message.find().sort({ _id: -1 }).limit(50); // ৫০টি মেসেজ লোড হবে স্পিড বাড়াতে
+        const history = await Message.find().sort({ _id: -1 }).limit(50);
         socket.emit('load-history', history.reverse());
     });
 
@@ -70,7 +69,7 @@ io.on('connection', (socket) => {
             const newMessage = new Message(data);
             await newMessage.save();
             socket.broadcast.emit('chat-message', data);
-        } catch (e) { console.log("Error saving message"); }
+        } catch (e) { console.log("DB Save Error"); }
     });
 
     socket.on('delete-message', async (msgId) => {
@@ -83,9 +82,7 @@ io.on('connection', (socket) => {
         io.emit('message-edited', { msgId, newText });
     });
 
-    socket.on('typing', (user) => {
-        socket.broadcast.emit('user-typing', user);
-    });
+    socket.on('typing', (user) => socket.broadcast.emit('user-typing', user));
 
     socket.on('disconnect', () => {
         delete onlineUsers[socket.id];
