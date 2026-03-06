@@ -1,263 +1,167 @@
 <!DOCTYPE html>
 <html lang="bn">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Messenger Pro - Ibrahim & Lipa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Pro - Control Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --chat-bg-color: #e5ddd5; }
-        .dark { --chat-bg-color: #0b141a; }
-
-        /* রেসপন্সিভ হাইট ফিক্স */
-        body {
-            height: 100vh;
-            height: 100dvh; /* মোবাইলের ডাইনামিক হাইট */
-        }
-
-        #chat-window {
-            flex: 1; /* এটি স্ক্রিনের বাকি অংশ দখল করবে */
-            background-color: var(--chat-bg-color);
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
-        }
-
-        #name-popup { backdrop-filter: blur(10px); transition: all 0.4s ease; }
-        .glass-card { background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .dark .glass-card { background: rgba(15, 23, 42, 0.95); color: white; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .msg-bubble { max-width: 85%; }
-
-        @media (max-width: 768px) {
-            #sidebar { position: fixed; left: -100%; z-index: 100; height: 100%; width: 280px; transition: 0.3s; }
-            #sidebar.active { left: 0; }
-            #overlay.active { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 90; }
-        }
+        body { height: 100dvh; background: #f0f2f5; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        #chat-window { background: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     </style>
 </head>
+<body class="flex flex-col md:flex-row overflow-hidden">
 
-<body class="bg-gray-100 dark:bg-slate-950 font-sans flex overflow-hidden">
-
-    <div id="overlay" onclick="toggleSidebar()" class="hidden"></div>
-
-    <div id="name-popup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-4 hidden">
-        <div class="glass-card p-8 rounded-[2rem] shadow-2xl w-full max-w-sm text-center transform scale-95 transition-transform">
-            <h2 class="text-2xl font-black text-[#128c7e] mb-2">স্বাগতম!</h2>
-            <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">আপনার প্রোফাইল সেটআপ করুন</p>
-            <div class="mb-6 relative inline-block">
-                <label for="profile-pic-input" class="cursor-pointer group">
-                    <div id="avatar-preview" class="w-28 h-28 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-4 border-[#128c7e] overflow-hidden shadow-xl">
-                        <i class="fas fa-camera text-3xl text-gray-400"></i>
-                    </div>
-                    <div class="absolute bottom-1 right-1 bg-[#128c7e] text-white p-2 rounded-full text-xs shadow-lg ring-2 ring-white">
-                        <i class="fas fa-plus"></i>
-                    </div>
-                </label>
-                <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="updatePreview(this)">
-            </div>
-            <div class="flex flex-col gap-3">
-                <button onclick="setIdentity('ইব্রাহীম')" class="bg-[#128c7e] text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">আমি ইব্রাহীম</button>
-                <button onclick="setIdentity('লিপা আক্তার')" class="bg-[#e91e63] text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">আমি লিপা আক্তার</button>
+    <div id="auth-screen" class="fixed inset-0 z-[500] bg-white flex items-center justify-center p-4">
+        <div class="max-w-md w-full space-y-6 text-center">
+            <h1 class="text-4xl font-black text-[#128c7e]">MESSENGER PRO</h1>
+            <div class="space-y-4">
+                <input id="auth-user" type="text" placeholder="ইউজারনেম" class="w-full p-4 border rounded-2xl">
+                <input id="auth-pass" type="password" placeholder="পাসওয়ার্ড" class="w-full p-4 border rounded-2xl">
+                <button onclick="handleAuth('login')" class="w-full bg-[#128c7e] text-white p-4 rounded-2xl font-bold">লগইন</button>
+                <button onclick="handleAuth('register')" class="text-gray-500 text-sm">নতুন অ্যাকাউন্ট তৈরি করুন</button>
             </div>
         </div>
     </div>
 
-    <div id="sidebar" class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl transition-all">
-        <div class="p-5 bg-[#128c7e] text-white flex justify-between items-center">
-            <h1 class="font-black tracking-tight">MESSENGER PRO</h1>
-            <button onclick="toggleSidebar()" class="md:hidden"><i class="fas fa-chevron-left"></i></button>
+    <div id="sidebar" class="w-full md:w-80 bg-white border-r flex flex-col hidden md:flex">
+        <div class="p-6 bg-[#128c7e] text-white flex justify-between items-center">
+            <h2 class="font-bold">ইউজার লিস্ট</h2>
+            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
         </div>
-        <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-        <div class="p-4 border-t dark:border-slate-800 space-y-3">
-            <button onclick="toggleTheme()" class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white font-medium">
-                <span>ডার্ক মোড</span> <i id="theme-icon" class="fas fa-moon"></i>
-            </button>
-            <label class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white font-medium">
-                <span>ব্যাকগ্রাউন্ড পরিবর্তন</span> <i class="fas fa-image"></i>
-                <input type="file" accept="image/*" class="hidden" onchange="setChatBackground(this)">
-            </label>
-            <button onclick="removeBackground()" class="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl font-medium">
-                <span>ব্যাকগ্রাউন্ড মুছুন</span> <i class="fas fa-trash-alt"></i>
-            </button>
-        </div>
+        <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+        <div class="p-4 border-t text-center text-xs text-gray-400">অ্যাডমিন হিসেবে লগইন করলে ব্যান বাটন দেখা যাবে।</div>
     </div>
 
-    <div class="flex-1 flex flex-col w-full relative h-full">
-        <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-4 justify-between border-b dark:border-slate-800 sticky top-0 z-10 shrink-0">
+    <div class="flex-1 flex flex-col relative h-full">
+        <header class="h-16 bg-white border-b flex items-center px-4 justify-between">
             <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="text-[#128c7e] text-xl p-2 md:hidden"><i class="fas fa-bars"></i></button>
+                <img id="my-avatar-display" src="" class="w-10 h-10 rounded-full border">
                 <div>
-                    <h2 id="chat-title" class="font-bold text-gray-800 dark:text-white">আমাদের চ্যাট</h2>
-                    <p id="typing-status" class="text-[10px] text-green-500 font-bold italic h-3"></p>
+                    <h2 id="my-name-display" class="font-bold text-sm">ইব্রাহীম</h2>
+                    <p id="typing-status" class="text-[10px] text-green-500 italic"></p>
                 </div>
             </div>
-            <div id="current-user-tag" class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 font-bold uppercase"></div>
+            <button onclick="editProfile()" class="text-[#128c7e] text-sm font-bold">প্রোফাইল এডিট</button>
         </header>
 
-        <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4"></div>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
 
-        <form id="chat-form" class="h-20 bg-white dark:bg-slate-900 flex items-center px-4 gap-3 border-t dark:border-slate-800 shrink-0">
-            <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-400 hover:text-[#128c7e] text-xl transition"><i class="fas fa-paperclip"></i></button>
-            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSend(this)">
-            <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-2xl py-3 px-5 focus:outline-none text-sm border-2 border-transparent focus:border-[#128c7e] transition">
-            <button type="submit" class="bg-[#128c7e] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition"><i class="fas fa-paper-plane"></i></button>
+        <form id="chat-form" class="h-20 bg-white flex items-center px-4 gap-3 border-t">
+            <input id="msg-input" type="text" placeholder="মেসেজ..." class="flex-1 bg-gray-100 rounded-full py-3 px-6 focus:outline-none">
+            <button type="submit" class="bg-[#128c7e] text-white w-12 h-12 rounded-full shadow-lg"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
-
-    <audio id="msg-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"></audio>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const chatWindow = document.getElementById('chat-window');
-        const msgInput = document.getElementById('msg-input');
-        const namePopup = document.getElementById('name-popup');
-
-        let userName = localStorage.getItem('chat-user') || "";
-        let userAvatar = localStorage.getItem('chat-avatar') || "";
+        let currentUser = JSON.parse(localStorage.getItem('user-session'));
 
         window.onload = () => {
-            if (!userName) {
-                namePopup.classList.remove('hidden');
-            } else {
+            if (currentUser) {
+                document.getElementById('auth-screen').classList.add('hidden');
                 initApp();
             }
         };
 
+        async function handleAuth(type) {
+            const username = document.getElementById('auth-user').value;
+            const password = document.getElementById('auth-pass').value;
+            
+            const res = await fetch(`/api/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username, password, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' })
+            });
+
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+
+            localStorage.setItem('user-session', JSON.stringify(data));
+            location.reload();
+        }
+
         function initApp() {
-            document.getElementById("current-user-tag").innerText = userName;
-            socket.emit('new-user', { name: userName, avatar: userAvatar });
-            if (localStorage.getItem('theme') === 'dark') toggleTheme(true);
-            if (localStorage.getItem('chat-bg')) chatWindow.style.backgroundImage = `url(${localStorage.getItem('chat-bg')})`;
+            document.getElementById('my-name-display').innerText = currentUser.username;
+            document.getElementById('my-avatar-display').src = currentUser.avatar;
+            socket.emit('new-user', currentUser);
         }
 
-        function toggleTheme(init = false) {
-            if (!init) document.body.classList.toggle('dark');
-            else document.body.classList.add('dark');
-            const isDark = document.body.classList.contains('dark');
-            document.getElementById('theme-icon').className = isDark ? "fas fa-sun text-yellow-400" : "fas fa-moon";
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        }
-
-        function updatePreview(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    userAvatar = e.target.result;
-                    document.getElementById('avatar-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function setIdentity(name) {
-            userName = name;
-            localStorage.setItem('chat-user', name);
-            localStorage.setItem('chat-avatar', userAvatar);
-            namePopup.classList.add('hidden');
-            initApp();
-        }
-
-        function setChatBackground(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    chatWindow.style.backgroundImage = `url(${e.target.result})`;
-                    localStorage.setItem('chat-bg', e.target.result);
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // ব্যাকগ্রাউন্ড রিমুভ করার ফাংশন
-        function removeBackground() {
-            chatWindow.style.backgroundImage = "none";
-            localStorage.removeItem('chat-bg');
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('overlay').classList.toggle('hidden');
-            document.getElementById('overlay').classList.toggle('active');
-        }
-
-        function appendMessage(user, content, time, align, isFile, msgId, avatar) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `flex w-full ${align === 'self-end' ? 'justify-end' : 'justify-start'} animate-in fade-in duration-300`;
-            wrapper.id = `msg-${msgId}`;
-
-            const isSelf = align === 'self-end';
-            const bubbleColor = isSelf ? 'bg-[#dcf8c6] dark:bg-[#054740]' : 'bg-white dark:bg-slate-800';
-
-            wrapper.innerHTML = `
-            <div class="flex gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'} items-end msg-bubble group">
-                <img src="${avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-700 shadow-sm">
-                <div class="relative ${bubbleColor} p-3 rounded-2xl shadow-sm border dark:border-slate-700">
-                    <p class="text-[10px] font-black ${isSelf ? 'text-green-700 dark:text-green-400' : 'text-gray-500'} mb-1">${user}</p>
-                    ${isFile ? `<img src="${content}" class="rounded-xl max-w-full sm:max-w-[280px] cursor-pointer" onclick="window.open(this.src)">` : `<p class="text-sm dark:text-gray-100 leading-relaxed font-medium">${content}</p>`}
-                    <div class="flex items-center justify-end gap-2 mt-1.5">
-                        <span class="text-[9px] text-gray-400 font-bold">${time}</span>
-                        ${isSelf ? `<button onclick="deleteMsg('${msgId}')" class="text-red-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-trash text-[10px]"></i></button>` : ''}
-                    </div>
-                </div>
-            </div>`;
-            chatWindow.appendChild(wrapper);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        document.getElementById('chat-form').onsubmit = e => {
-            e.preventDefault();
-            const msg = msgInput.value.trim();
-            if (msg) {
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const msgId = Date.now().toString();
-                appendMessage('আপনি', msg, time, 'self-end', false, msgId, userAvatar);
-                socket.emit('chat-message', { user: userName, text: msg, time, isFile: false, msgId, avatar: userAvatar });
-                msgInput.value = '';
-            }
-        };
-
-        function handleImageSend(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const msgId = Date.now().toString();
-                    appendMessage('আপনি', e.target.result, time, 'self-end', true, msgId, userAvatar);
-                    socket.emit('chat-message', { user: userName, text: e.target.result, time, isFile: true, msgId, avatar: userAvatar });
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function deleteMsg(msgId) {
-            if (confirm("মেসেজটি সবার জন্য ডিলিট হবে। নিশ্চিত?")) socket.emit('delete-message', msgId);
-        }
-
-        socket.on('chat-message', d => { appendMessage(d.user, d.text, d.time, 'self-start', d.isFile, d.msgId, d.avatar); document.getElementById('msg-sound').play(); });
-        socket.on('message-deleted', msgId => document.getElementById(`msg-${msgId}`)?.remove());
-        socket.on('load-history', h => { chatWindow.innerHTML = ''; h.forEach(d => appendMessage(d.user === userName ? 'আপনি' : d.user, d.text, d.time, d.user === userName ? 'self-end' : 'self-start', d.isFile, d.msgId, d.avatar)); });
-        
-        socket.on('user-list', users => {
+        // --- অ্যাডমিন: ইউজার ম্যানেজ ---
+        socket.on('user-list', (users) => {
             const list = document.getElementById('user-list');
             list.innerHTML = users.map(u => `
-            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/50">
-                <div class="relative">
-                    <img src="${u.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-10 h-10 rounded-full object-cover">
-                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div class="flex items-center gap-2">
+                        <img src="${u.avatar}" class="w-8 h-8 rounded-full">
+                        <span class="text-sm font-bold">${u.username}</span>
+                    </div>
+                    ${currentUser.role === 'admin' && u.username !== currentUser.username ? 
+                        `<button onclick="banUser('${u.username}')" class="text-red-500 text-xs font-bold">BAN</button>` : ''}
                 </div>
-                <span class="text-sm font-bold dark:text-gray-200">${u.name}</span>
-            </div>`).join('');
+            `).join('');
         });
 
-        msgInput.oninput = () => socket.emit('typing', { user: userName });
-        socket.on('display-typing', d => {
-            document.getElementById('typing-status').innerText = `${d.user} টাইপ করছে...`;
-            setTimeout(() => document.getElementById('typing-status').innerText = '', 2000);
+        function banUser(name) {
+            if(confirm(`${name} কে ব্যান করতে চান?`)) socket.emit('admin-ban-user', name);
+        }
+
+        socket.on('user-banned', (name) => {
+            if(currentUser.username === name) {
+                alert("আপনাকে ব্যান করা হয়েছে!");
+                logout();
+            }
         });
+
+        // --- মেসেজ লজিক ---
+        document.getElementById('chat-form').onsubmit = e => {
+            e.preventDefault();
+            const text = document.getElementById('msg-input').value;
+            if(!text) return;
+            const msgData = { 
+                user: currentUser.username, text, avatar: currentUser.avatar, 
+                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                msgId: Date.now().toString() 
+            };
+            appendMessage('আপনি', text, msgData.time, 'self-end', msgData.avatar);
+            socket.emit('chat-message', msgData);
+            document.getElementById('msg-input').value = '';
+        };
+
+        function appendMessage(user, content, time, align, avatar) {
+            const chat = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `flex w-full ${align === 'self-end' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div class="flex gap-2 max-w-[80%] ${align === 'self-end' ? 'flex-row-reverse' : ''}">
+                    <img src="${avatar}" class="w-8 h-8 rounded-full self-end">
+                    <div class="${align === 'self-end' ? 'bg-[#dcf8c6]' : 'bg-white'} p-3 rounded-2xl shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500">${user}</p>
+                        <p class="text-sm">${content}</p>
+                        <p class="text-[8px] text-right mt-1 text-gray-400">${time}</p>
+                    </div>
+                </div>`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        socket.on('chat-message', d => appendMessage(d.user, d.text, d.time, 'self-start', d.avatar));
+        socket.on('load-history', h => h.forEach(d => appendMessage(d.user === currentUser.username ? 'আপনি' : d.user, d.text, d.time, d.user === currentUser.username ? 'self-end' : 'self-start', d.avatar)));
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function editProfile() {
+            const newName = prompt("নতুন নাম দিন:", currentUser.username);
+            const newAvatar = prompt("প্রোফাইল পিকচার লিংক (URL) দিন:", currentUser.avatar);
+            // এখানে আপনি চাইলে API call করে ডাটাবেজে আপডেট করতে পারেন
+            alert("প্রোফাইল আপডেট হয়েছে (Refresh করুন)");
+        }
     </script>
 </body>
 </html>
