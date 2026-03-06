@@ -8,152 +8,102 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --chat-bg-color: #e5ddd5;
-        }
+        :root { --chat-bg-color: #e5ddd5; }
+        .dark { --chat-bg-color: #0b141a; }
 
-        .dark {
-            --chat-bg-color: #0b141a;
+        /* রেসপন্সিভ হাইট ফিক্স */
+        body {
+            height: 100vh;
+            height: 100dvh; /* মোবাইলের ডাইনামিক হাইট */
         }
 
         #chat-window {
-            height: calc(100vh - 130px);
+            flex: 1; /* এটি স্ক্রিনের বাকি অংশ দখল করবে */
             background-color: var(--chat-bg-color);
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
+            background-repeat: no-repeat;
         }
 
-        /* পপআপ এনিমেশন */
-        #name-popup {
-            backdrop-filter: blur(10px);
-            transition: all 0.4s ease;
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .dark .glass-card {
-            background: rgba(15, 23, 42, 0.95);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .msg-bubble {
-            max-width: 85%;
-        }
+        #name-popup { backdrop-filter: blur(10px); transition: all 0.4s ease; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .dark .glass-card { background: rgba(15, 23, 42, 0.95); color: white; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .msg-bubble { max-width: 85%; }
 
         @media (max-width: 768px) {
-            #sidebar {
-                position: fixed;
-                left: -100%;
-                z-index: 100;
-                height: 100%;
-                width: 280px;
-                transition: 0.3s;
-            }
-
-            #sidebar.active {
-                left: 0;
-            }
-
-            #overlay.active {
-                display: block;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.6);
-                z-index: 90;
-            }
+            #sidebar { position: fixed; left: -100%; z-index: 100; height: 100%; width: 280px; transition: 0.3s; }
+            #sidebar.active { left: 0; }
+            #overlay.active { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 90; }
         }
     </style>
 </head>
 
-<body class="bg-gray-100 dark:bg-slate-950 font-sans h-screen flex overflow-hidden">
+<body class="bg-gray-100 dark:bg-slate-950 font-sans flex overflow-hidden">
 
     <div id="overlay" onclick="toggleSidebar()" class="hidden"></div>
 
     <div id="name-popup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-4 hidden">
-        <div
-            class="glass-card p-8 rounded-[2rem] shadow-2xl w-full max-w-sm text-center transform scale-95 transition-transform">
+        <div class="glass-card p-8 rounded-[2rem] shadow-2xl w-full max-w-sm text-center transform scale-95 transition-transform">
             <h2 class="text-2xl font-black text-[#128c7e] mb-2">স্বাগতম!</h2>
             <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">আপনার প্রোফাইল সেটআপ করুন</p>
-
             <div class="mb-6 relative inline-block">
                 <label for="profile-pic-input" class="cursor-pointer group">
-                    <div id="avatar-preview"
-                        class="w-28 h-28 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-4 border-[#128c7e] overflow-hidden shadow-xl group-hover:border-[#075e54] transition">
+                    <div id="avatar-preview" class="w-28 h-28 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-4 border-[#128c7e] overflow-hidden shadow-xl">
                         <i class="fas fa-camera text-3xl text-gray-400"></i>
                     </div>
-                    <div
-                        class="absolute bottom-1 right-1 bg-[#128c7e] text-white p-2 rounded-full text-xs shadow-lg ring-2 ring-white">
+                    <div class="absolute bottom-1 right-1 bg-[#128c7e] text-white p-2 rounded-full text-xs shadow-lg ring-2 ring-white">
                         <i class="fas fa-plus"></i>
                     </div>
                 </label>
-                <input type="file" id="profile-pic-input" accept="image/*" class="hidden"
-                    onchange="updatePreview(this)">
+                <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="updatePreview(this)">
             </div>
-
             <div class="flex flex-col gap-3">
-                <button onclick="setIdentity('ইব্রাহীম')"
-                    class="bg-[#128c7e] text-white p-4 rounded-2xl font-bold shadow-lg hover:shadow-[#128c7e]/30 active:scale-95 transition">আমি
-                    ইব্রাহীম</button>
-                <button onclick="setIdentity('লিপা আক্তার')"
-                    class="bg-[#e91e63] text-white p-4 rounded-2xl font-bold shadow-lg hover:shadow-[#e91e63]/30 active:scale-95 transition">আমি
-                    লিপা আক্তার</button>
+                <button onclick="setIdentity('ইব্রাহীম')" class="bg-[#128c7e] text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">আমি ইব্রাহীম</button>
+                <button onclick="setIdentity('লিপা আক্তার')" class="bg-[#e91e63] text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">আমি লিপা আক্তার</button>
             </div>
         </div>
     </div>
 
-    <div id="sidebar"
-        class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl transition-all">
+    <div id="sidebar" class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl transition-all">
         <div class="p-5 bg-[#128c7e] text-white flex justify-between items-center">
             <h1 class="font-black tracking-tight">MESSENGER PRO</h1>
             <button onclick="toggleSidebar()" class="md:hidden"><i class="fas fa-chevron-left"></i></button>
         </div>
         <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
         <div class="p-4 border-t dark:border-slate-800 space-y-3">
-            <button onclick="toggleTheme()"
-                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white font-medium">
+            <button onclick="toggleTheme()" class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white font-medium">
                 <span>ডার্ক মোড</span> <i id="theme-icon" class="fas fa-moon"></i>
             </button>
-            <label
-                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white font-medium">
-                <span>ব্যাকগ্রাউন্ড</span> <i class="fas fa-image"></i>
+            <label class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white font-medium">
+                <span>ব্যাকগ্রাউন্ড পরিবর্তন</span> <i class="fas fa-image"></i>
                 <input type="file" accept="image/*" class="hidden" onchange="setChatBackground(this)">
             </label>
+            <button onclick="removeBackground()" class="w-full flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl font-medium">
+                <span>ব্যাকগ্রাউন্ড মুছুন</span> <i class="fas fa-trash-alt"></i>
+            </button>
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col w-full relative">
-        <header
-            class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-4 justify-between border-b dark:border-slate-800 sticky top-0 z-10">
+    <div class="flex-1 flex flex-col w-full relative h-full">
+        <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-4 justify-between border-b dark:border-slate-800 sticky top-0 z-10 shrink-0">
             <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="text-[#128c7e] text-xl p-2 md:hidden"><i
-                        class="fas fa-bars"></i></button>
+                <button onclick="toggleSidebar()" class="text-[#128c7e] text-xl p-2 md:hidden"><i class="fas fa-bars"></i></button>
                 <div>
                     <h2 id="chat-title" class="font-bold text-gray-800 dark:text-white">আমাদের চ্যাট</h2>
                     <p id="typing-status" class="text-[10px] text-green-500 font-bold italic h-3"></p>
                 </div>
             </div>
-            <div id="current-user-tag"
-                class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 font-bold uppercase">
-            </div>
+            <div id="current-user-tag" class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 font-bold uppercase"></div>
         </header>
 
         <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4"></div>
 
-        <form id="chat-form"
-            class="h-20 bg-white dark:bg-slate-900 flex items-center px-4 gap-3 border-t dark:border-slate-800">
-            <button type="button" onclick="document.getElementById('file-input').click()"
-                class="text-gray-400 hover:text-[#128c7e] text-xl transition"><i class="fas fa-paperclip"></i></button>
+        <form id="chat-form" class="h-20 bg-white dark:bg-slate-900 flex items-center px-4 gap-3 border-t dark:border-slate-800 shrink-0">
+            <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-400 hover:text-[#128c7e] text-xl transition"><i class="fas fa-paperclip"></i></button>
             <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSend(this)">
-            <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..."
-                class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-2xl py-3 px-5 focus:outline-none text-sm border-2 border-transparent focus:border-[#128c7e] transition">
-            <button type="submit"
-                class="bg-[#128c7e] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition"><i
-                    class="fas fa-paper-plane"></i></button>
+            <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-2xl py-3 px-5 focus:outline-none text-sm border-2 border-transparent focus:border-[#128c7e] transition">
+            <button type="submit" class="bg-[#128c7e] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
 
@@ -169,7 +119,6 @@
         let userName = localStorage.getItem('chat-user') || "";
         let userAvatar = localStorage.getItem('chat-avatar') || "";
 
-        // শুরুতে পপআপ চেক
         window.onload = () => {
             if (!userName) {
                 namePopup.classList.remove('hidden');
@@ -223,6 +172,12 @@
             }
         }
 
+        // ব্যাকগ্রাউন্ড রিমুভ করার ফাংশন
+        function removeBackground() {
+            chatWindow.style.backgroundImage = "none";
+            localStorage.removeItem('chat-bg');
+        }
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('overlay').classList.toggle('hidden');
@@ -242,7 +197,7 @@
                 <img src="${avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-700 shadow-sm">
                 <div class="relative ${bubbleColor} p-3 rounded-2xl shadow-sm border dark:border-slate-700">
                     <p class="text-[10px] font-black ${isSelf ? 'text-green-700 dark:text-green-400' : 'text-gray-500'} mb-1">${user}</p>
-                    ${isFile ? `<img src="${content}" class="rounded-xl max-w-full sm:max-w-[280px] cursor-pointer hover:opacity-90 transition" onclick="window.open(this.src)">` : `<p class="text-sm dark:text-gray-100 leading-relaxed font-medium">${content}</p>`}
+                    ${isFile ? `<img src="${content}" class="rounded-xl max-w-full sm:max-w-[280px] cursor-pointer" onclick="window.open(this.src)">` : `<p class="text-sm dark:text-gray-100 leading-relaxed font-medium">${content}</p>`}
                     <div class="flex items-center justify-end gap-2 mt-1.5">
                         <span class="text-[9px] text-gray-400 font-bold">${time}</span>
                         ${isSelf ? `<button onclick="deleteMsg('${msgId}')" class="text-red-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-trash text-[10px]"></i></button>` : ''}
@@ -285,10 +240,11 @@
         socket.on('chat-message', d => { appendMessage(d.user, d.text, d.time, 'self-start', d.isFile, d.msgId, d.avatar); document.getElementById('msg-sound').play(); });
         socket.on('message-deleted', msgId => document.getElementById(`msg-${msgId}`)?.remove());
         socket.on('load-history', h => { chatWindow.innerHTML = ''; h.forEach(d => appendMessage(d.user === userName ? 'আপনি' : d.user, d.text, d.time, d.user === userName ? 'self-end' : 'self-start', d.isFile, d.msgId, d.avatar)); });
+        
         socket.on('user-list', users => {
             const list = document.getElementById('user-list');
             list.innerHTML = users.map(u => `
-            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-transparent hover:border-[#128c7e]/20 transition">
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/50">
                 <div class="relative">
                     <img src="${u.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-10 h-10 rounded-full object-cover">
                     <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
@@ -304,5 +260,4 @@
         });
     </script>
 </body>
-
 </html>
