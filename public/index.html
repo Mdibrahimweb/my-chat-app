@@ -16,10 +16,6 @@
             --chat-bg-color: #0b141a;
         }
 
-        body {
-            transition: background 0.3s;
-        }
-
         #chat-window {
             height: calc(100vh - 130px);
             background-color: var(--chat-bg-color);
@@ -28,22 +24,27 @@
             background-attachment: fixed;
         }
 
-        .glass {
-            backdrop-filter: blur(15px);
-            background: rgba(255, 255, 255, 0.9);
+        /* পপআপ এনিমেশন */
+        #name-popup {
+            backdrop-filter: blur(10px);
+            transition: all 0.4s ease;
         }
 
-        .dark .glass {
-            background: rgba(15, 23, 42, 0.9);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.95);
             color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .msg-bubble {
             max-width: 85%;
-            word-wrap: break-word;
         }
 
-        /* মোবাইল রেসপন্সিভ সাইডবার */
         @media (max-width: 768px) {
             #sidebar {
                 position: fixed;
@@ -58,15 +59,11 @@
                 left: 0;
             }
 
-            #overlay {
-                display: none;
-            }
-
             #overlay.active {
                 display: block;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.6);
                 z-index: 90;
             }
         }
@@ -75,81 +72,87 @@
 
 <body class="bg-gray-100 dark:bg-slate-950 font-sans h-screen flex overflow-hidden">
 
-    <div id="overlay" onclick="toggleSidebar()"></div>
+    <div id="overlay" onclick="toggleSidebar()" class="hidden"></div>
 
-    <div id="name-popup" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] p-4">
-        <div class="glass p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-white/20">
-            <h2 class="text-2xl font-bold text-[#128c7e] mb-6">প্রোফাইল সেটআপ</h2>
+    <div id="name-popup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-4 hidden">
+        <div
+            class="glass-card p-8 rounded-[2rem] shadow-2xl w-full max-w-sm text-center transform scale-95 transition-transform">
+            <h2 class="text-2xl font-black text-[#128c7e] mb-2">স্বাগতম!</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">আপনার প্রোফাইল সেটআপ করুন</p>
+
             <div class="mb-6 relative inline-block">
-                <label for="profile-pic-input" class="cursor-pointer">
+                <label for="profile-pic-input" class="cursor-pointer group">
                     <div id="avatar-preview"
-                        class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center border-4 border-[#128c7e] overflow-hidden shadow-inner">
-                        <i class="fas fa-user text-4xl text-gray-400"></i>
+                        class="w-28 h-28 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center border-4 border-[#128c7e] overflow-hidden shadow-xl group-hover:border-[#075e54] transition">
+                        <i class="fas fa-camera text-3xl text-gray-400"></i>
                     </div>
-                    <div class="absolute bottom-0 right-0 bg-[#128c7e] text-white p-2 rounded-full text-xs shadow-lg"><i
-                            class="fas fa-pen"></i></div>
+                    <div
+                        class="absolute bottom-1 right-1 bg-[#128c7e] text-white p-2 rounded-full text-xs shadow-lg ring-2 ring-white">
+                        <i class="fas fa-plus"></i>
+                    </div>
                 </label>
                 <input type="file" id="profile-pic-input" accept="image/*" class="hidden"
-                    onchange="updatePreview(this, 'avatar-preview')">
+                    onchange="updatePreview(this)">
             </div>
+
             <div class="flex flex-col gap-3">
                 <button onclick="setIdentity('ইব্রাহীম')"
-                    class="bg-[#128c7e] text-white p-4 rounded-xl font-bold hover:brightness-110 active:scale-95 transition">আমি
+                    class="bg-[#128c7e] text-white p-4 rounded-2xl font-bold shadow-lg hover:shadow-[#128c7e]/30 active:scale-95 transition">আমি
                     ইব্রাহীম</button>
                 <button onclick="setIdentity('লিপা আক্তার')"
-                    class="bg-[#e91e63] text-white p-4 rounded-xl font-bold hover:brightness-110 active:scale-95 transition">আমি
+                    class="bg-[#e91e63] text-white p-4 rounded-2xl font-bold shadow-lg hover:shadow-[#e91e63]/30 active:scale-95 transition">আমি
                     লিপা আক্তার</button>
             </div>
         </div>
     </div>
 
-    <div id="sidebar" class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl">
-        <div class="p-4 bg-[#128c7e] text-white flex justify-between items-center">
-            <span class="font-bold uppercase tracking-wider">অ্যাক্টিভ মেম্বার</span>
-            <button onclick="toggleSidebar()" class="md:hidden"><i class="fas fa-times"></i></button>
+    <div id="sidebar"
+        class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl transition-all">
+        <div class="p-5 bg-[#128c7e] text-white flex justify-between items-center">
+            <h1 class="font-black tracking-tight">MESSENGER PRO</h1>
+            <button onclick="toggleSidebar()" class="md:hidden"><i class="fas fa-chevron-left"></i></button>
         </div>
         <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-
         <div class="p-4 border-t dark:border-slate-800 space-y-3">
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">কাস্টমাইজেশন</label>
             <button onclick="toggleTheme()"
-                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white">
+                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white font-medium">
                 <span>ডার্ক মোড</span> <i id="theme-icon" class="fas fa-moon"></i>
             </button>
             <label
-                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white">
-                <span>ব্যাকগ্রাউন্ড পরিবর্তন</span> <i class="fas fa-image"></i>
+                class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white font-medium">
+                <span>ব্যাকগ্রাউন্ড</span> <i class="fas fa-image"></i>
                 <input type="file" accept="image/*" class="hidden" onchange="setChatBackground(this)">
             </label>
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col w-full">
+    <div class="flex-1 flex flex-col w-full relative">
         <header
-            class="h-16 bg-[#ededed] dark:bg-slate-800 flex items-center px-4 justify-between border-b dark:border-slate-700">
+            class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-4 justify-between border-b dark:border-slate-800 sticky top-0 z-10">
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="text-[#128c7e] text-xl p-2 md:hidden"><i
                         class="fas fa-bars"></i></button>
                 <div>
-                    <h2 class="font-bold text-gray-800 dark:text-white text-base">আমাদের চ্যাট</h2>
-                    <p id="typing-status" class="text-[10px] text-green-600 font-medium italic"></p>
+                    <h2 id="chat-title" class="font-bold text-gray-800 dark:text-white">আমাদের চ্যাট</h2>
+                    <p id="typing-status" class="text-[10px] text-green-500 font-bold italic h-3"></p>
                 </div>
             </div>
             <div id="current-user-tag"
-                class="text-[10px] bg-white dark:bg-slate-700 px-3 py-1 rounded-full border dark:text-gray-300"></div>
+                class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full border border-green-200 dark:border-green-800 font-bold uppercase">
+            </div>
         </header>
 
         <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4"></div>
 
         <form id="chat-form"
-            class="h-16 bg-white dark:bg-slate-900 flex items-center px-3 gap-2 border-t dark:border-slate-800">
+            class="h-20 bg-white dark:bg-slate-900 flex items-center px-4 gap-3 border-t dark:border-slate-800">
             <button type="button" onclick="document.getElementById('file-input').click()"
-                class="text-gray-400 text-2xl px-2"><i class="fas fa-paperclip"></i></button>
+                class="text-gray-400 hover:text-[#128c7e] text-xl transition"><i class="fas fa-paperclip"></i></button>
             <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSend(this)">
             <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..."
-                class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-full py-2 px-4 focus:outline-none text-sm border dark:border-slate-700">
+                class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-2xl py-3 px-5 focus:outline-none text-sm border-2 border-transparent focus:border-[#128c7e] transition">
             <button type="submit"
-                class="bg-[#128c7e] text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition"><i
+                class="bg-[#128c7e] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition"><i
                     class="fas fa-paper-plane"></i></button>
         </form>
     </div>
@@ -161,12 +164,26 @@
         const socket = io();
         const chatWindow = document.getElementById('chat-window');
         const msgInput = document.getElementById('msg-input');
+        const namePopup = document.getElementById('name-popup');
+
         let userName = localStorage.getItem('chat-user') || "";
         let userAvatar = localStorage.getItem('chat-avatar') || "";
 
-        // থিম এবং ব্যাকগ্রাউন্ড সেটআপ
-        if (localStorage.getItem('theme') === 'dark') toggleTheme(true);
-        if (localStorage.getItem('chat-bg')) chatWindow.style.backgroundImage = `url(${localStorage.getItem('chat-bg')})`;
+        // শুরুতে পপআপ চেক
+        window.onload = () => {
+            if (!userName) {
+                namePopup.classList.remove('hidden');
+            } else {
+                initApp();
+            }
+        };
+
+        function initApp() {
+            document.getElementById("current-user-tag").innerText = userName;
+            socket.emit('new-user', { name: userName, avatar: userAvatar });
+            if (localStorage.getItem('theme') === 'dark') toggleTheme(true);
+            if (localStorage.getItem('chat-bg')) chatWindow.style.backgroundImage = `url(${localStorage.getItem('chat-bg')})`;
+        }
 
         function toggleTheme(init = false) {
             if (!init) document.body.classList.toggle('dark');
@@ -174,6 +191,25 @@
             const isDark = document.body.classList.contains('dark');
             document.getElementById('theme-icon').className = isDark ? "fas fa-sun text-yellow-400" : "fas fa-moon";
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function updatePreview(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    userAvatar = e.target.result;
+                    document.getElementById('avatar-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function setIdentity(name) {
+            userName = name;
+            localStorage.setItem('chat-user', name);
+            localStorage.setItem('chat-avatar', userAvatar);
+            namePopup.classList.add('hidden');
+            initApp();
         }
 
         function setChatBackground(input) {
@@ -187,54 +223,29 @@
             }
         }
 
-        function updatePreview(input, targetId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    userAvatar = e.target.result;
-                    document.getElementById(targetId).innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function setIdentity(name) {
-            userName = name;
-            localStorage.setItem('chat-user', name);
-            localStorage.setItem('chat-avatar', userAvatar);
-            document.getElementById("name-popup").style.display = "none";
-            document.getElementById("current-user-tag").innerText = `আপনি: ${name}`;
-            socket.emit('new-user', { name, avatar: userAvatar });
-        }
-
-        if (userName) {
-            document.getElementById("name-popup").style.display = "none";
-            document.getElementById("current-user-tag").innerText = `আপনি: ${userName}`;
-            socket.emit('new-user', { name: userName, avatar: userAvatar });
-        }
-
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('hidden');
             document.getElementById('overlay').classList.toggle('active');
         }
 
         function appendMessage(user, content, time, align, isFile, msgId, avatar) {
             const wrapper = document.createElement('div');
-            wrapper.className = `flex w-full ${align === 'self-end' ? 'justify-end' : 'justify-start'}`;
+            wrapper.className = `flex w-full ${align === 'self-end' ? 'justify-end' : 'justify-start'} animate-in fade-in duration-300`;
             wrapper.id = `msg-${msgId}`;
 
             const isSelf = align === 'self-end';
             const bubbleColor = isSelf ? 'bg-[#dcf8c6] dark:bg-[#054740]' : 'bg-white dark:bg-slate-800';
 
             wrapper.innerHTML = `
-            <div class="flex gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'} items-end msg-bubble">
-                <img src="${avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-6 h-6 rounded-full border border-gray-300">
-                <div class="group relative ${bubbleColor} p-2.5 rounded-2xl shadow-sm border dark:border-slate-700">
-                    <p class="text-[9px] font-bold text-gray-500 mb-0.5">${user}</p>
-                    ${isFile ? `<img src="${content}" class="rounded-lg max-w-full sm:max-w-[250px] cursor-zoom-in" onclick="window.open(this.src)">` : `<p class="text-sm dark:text-gray-100 leading-tight">${content}</p>`}
-                    <div class="flex items-center justify-end gap-1 mt-1">
-                        <span class="text-[8px] text-gray-400">${time}</span>
-                        ${isSelf ? `<button onclick="deleteMsg('${msgId}')" class="opacity-0 group-hover:opacity-100 text-red-500 transition ml-1"><i class="fas fa-trash-can text-[10px]"></i></button>` : ''}
+            <div class="flex gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'} items-end msg-bubble group">
+                <img src="${avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-700 shadow-sm">
+                <div class="relative ${bubbleColor} p-3 rounded-2xl shadow-sm border dark:border-slate-700">
+                    <p class="text-[10px] font-black ${isSelf ? 'text-green-700 dark:text-green-400' : 'text-gray-500'} mb-1">${user}</p>
+                    ${isFile ? `<img src="${content}" class="rounded-xl max-w-full sm:max-w-[280px] cursor-pointer hover:opacity-90 transition" onclick="window.open(this.src)">` : `<p class="text-sm dark:text-gray-100 leading-relaxed font-medium">${content}</p>`}
+                    <div class="flex items-center justify-end gap-2 mt-1.5">
+                        <span class="text-[9px] text-gray-400 font-bold">${time}</span>
+                        ${isSelf ? `<button onclick="deleteMsg('${msgId}')" class="text-red-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100"><i class="fas fa-trash text-[10px]"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -242,7 +253,6 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        // চ্যাট ইভেন্টগুলো (আগের মতই থাকবে)
         document.getElementById('chat-form').onsubmit = e => {
             e.preventDefault();
             const msg = msgInput.value.trim();
@@ -269,7 +279,7 @@
         }
 
         function deleteMsg(msgId) {
-            if (confirm("মেসেজটি ডিলিট করতে চান?")) socket.emit('delete-message', msgId);
+            if (confirm("মেসেজটি সবার জন্য ডিলিট হবে। নিশ্চিত?")) socket.emit('delete-message', msgId);
         }
 
         socket.on('chat-message', d => { appendMessage(d.user, d.text, d.time, 'self-start', d.isFile, d.msgId, d.avatar); document.getElementById('msg-sound').play(); });
@@ -278,12 +288,15 @@
         socket.on('user-list', users => {
             const list = document.getElementById('user-list');
             list.innerHTML = users.map(u => `
-            <div class="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-slate-800">
-                <img src="${u.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-8 h-8 rounded-full">
-                <span class="text-sm font-medium dark:text-gray-200">${u.name}</span>
-                <span class="w-2 h-2 bg-green-500 rounded-full ml-auto"></span>
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-transparent hover:border-[#128c7e]/20 transition">
+                <div class="relative">
+                    <img src="${u.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-10 h-10 rounded-full object-cover">
+                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                </div>
+                <span class="text-sm font-bold dark:text-gray-200">${u.name}</span>
             </div>`).join('');
         });
+
         msgInput.oninput = () => socket.emit('typing', { user: userName });
         socket.on('display-typing', d => {
             document.getElementById('typing-status').innerText = `${d.user} টাইপ করছে...`;
