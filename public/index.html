@@ -1,82 +1,167 @@
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, { maxHttpBufferSize: 1e8, cors: { origin: "*" } });
-const mongoose = require('mongoose');
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Pro - Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { height: 100dvh; background: #f0f2f5; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        #chat-window { background: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row overflow-hidden">
 
-const uri = "mongodb+srv://nid-server:Ibrahim9250@cluster0.9jxg3wa.mongodb.net/messengerDB?retryWrites=true&w=majority";
-mongoose.connect(uri).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log(err));
+    <div id="auth-screen" class="fixed inset-0 z-[500] bg-white flex items-center justify-center p-4">
+        <div class="max-w-md w-full space-y-6 text-center">
+            <h1 class="text-4xl font-black text-[#128c7e]">MESSENGER PRO</h1>
+            <div class="space-y-4">
+                <input id="auth-user" type="text" placeholder="ইউজারনেম" class="w-full p-4 border rounded-2xl">
+                <input id="auth-pass" type="password" placeholder="পাসওয়ার্ড" class="w-full p-4 border rounded-2xl">
+                <button onclick="handleAuth('login')" class="w-full bg-[#128c7e] text-white p-4 rounded-2xl font-bold">লগইন</button>
+                <button onclick="handleAuth('register')" class="text-gray-500 text-sm">নতুন অ্যাকাউন্ট তৈরি করুন</button>
+            </div>
+        </div>
+    </div>
 
-// --- স্কিমা সমূহ ---
-const userSchema = new mongoose.Schema({
-    username: { type: String, unique: true },
-    password: { type: String }, // এখানে চাইলে হ্যাশ ব্যবহার করতে পারেন
-    avatar: String,
-    role: { type: String, default: 'user' }, // 'admin' বা 'user'
-    isBanned: { type: Boolean, default: false }
-});
-const User = mongoose.model('User', userSchema);
+    <div id="sidebar" class="w-full md:w-80 bg-white border-r flex flex-col hidden md:flex">
+        <div class="p-6 bg-[#128c7e] text-white flex justify-between items-center">
+            <h2 class="font-bold">ইউজার লিস্ট</h2>
+            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+        <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+        <div class="p-4 border-t text-center text-xs text-gray-400">অ্যাডমিন হিসেবে লগইন করলে ব্যান বাটন দেখা যাবে।</div>
+    </div>
 
-const messageSchema = new mongoose.Schema({
-    user: String, text: String, time: String, isFile: Boolean,
-    msgId: { type: String, unique: true }, avatar: String,
-    replyTo: { type: String, default: null }, status: { type: String, default: 'sent' }
-});
-const Message = mongoose.model('Message', messageSchema);
+    <div class="flex-1 flex flex-col relative h-full">
+        <header class="h-16 bg-white border-b flex items-center px-4 justify-between">
+            <div class="flex items-center gap-3">
+                <img id="my-avatar-display" src="" class="w-10 h-10 rounded-full border">
+                <div>
+                    <h2 id="my-name-display" class="font-bold text-sm">ইব্রাহীম</h2>
+                    <p id="typing-status" class="text-[10px] text-green-500 italic"></p>
+                </div>
+            </div>
+            <button onclick="editProfile()" class="text-[#128c7e] text-sm font-bold">প্রোফাইল এডিট</button>
+        </header>
 
-app.use(express.static('public'));
-app.use(express.json());
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
 
-// --- লগইন এবং প্রোফাইল API ---
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username, password });
-    if (user) {
-        if (user.isBanned) return res.status(403).json({ error: "আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে!" });
-        res.json(user);
-    } else {
-        res.status(401).json({ error: "ভুল ইউজারনেম বা পাসওয়ার্ড!" });
-    }
-});
+        <form id="chat-form" class="h-20 bg-white flex items-center px-4 gap-3 border-t">
+            <input id="msg-input" type="text" placeholder="মেসেজ..." class="flex-1 bg-gray-100 rounded-full py-3 px-6 focus:outline-none">
+            <button type="submit" class="bg-[#128c7e] text-white w-12 h-12 rounded-full shadow-lg"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
 
-app.post('/api/register', async (req, res) => {
-    try {
-        const newUser = new User(req.body);
-        await newUser.save();
-        res.json(newUser);
-    } catch (e) { res.status(400).json({ error: "ইউজারনেমটি আগে থেকেই আছে!" }); }
-});
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentUser = JSON.parse(localStorage.getItem('user-session'));
 
-// --- সকেট লজিক ---
-let onlineUsers = {};
+        window.onload = () => {
+            if (currentUser) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                initApp();
+            }
+        };
 
-io.on('connection', (socket) => {
-    socket.on('new-user', async (userData) => {
-        onlineUsers[socket.id] = userData;
-        io.emit('user-list', Object.values(onlineUsers));
-        
-        // হিস্ট্রি লোড
-        const history = await Message.find().sort({ _id: -1 }).limit(100);
-        socket.emit('load-history', history.reverse());
-    });
+        async function handleAuth(type) {
+            const username = document.getElementById('auth-user').value;
+            const password = document.getElementById('auth-pass').value;
+            
+            const res = await fetch(`/api/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username, password, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' })
+            });
 
-    socket.on('chat-message', async (data) => {
-        const newMessage = new Message(data);
-        await newMessage.save();
-        socket.broadcast.emit('chat-message', data);
-    });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
 
-    // অ্যাডমিন ফিচার: ইউজার ব্যান করা
-    socket.on('admin-ban-user', async (username) => {
-        await User.updateOne({ username }, { isBanned: true });
-        io.emit('user-banned', username);
-    });
+            localStorage.setItem('user-session', JSON.stringify(data));
+            location.reload();
+        }
 
-    socket.on('disconnect', () => {
-        delete onlineUsers[socket.id];
-        io.emit('user-list', Object.values(onlineUsers));
-    });
-});
+        function initApp() {
+            document.getElementById('my-name-display').innerText = currentUser.username;
+            document.getElementById('my-avatar-display').src = currentUser.avatar;
+            socket.emit('new-user', currentUser);
+        }
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`🚀 Server: http://localhost:${PORT}`));
+        // --- অ্যাডমিন: ইউজার ম্যানেজ ---
+        socket.on('user-list', (users) => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = users.map(u => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div class="flex items-center gap-2">
+                        <img src="${u.avatar}" class="w-8 h-8 rounded-full">
+                        <span class="text-sm font-bold">${u.username}</span>
+                    </div>
+                    ${currentUser.role === 'admin' && u.username !== currentUser.username ? 
+                        `<button onclick="banUser('${u.username}')" class="text-red-500 text-xs font-bold">BAN</button>` : ''}
+                </div>
+            `).join('');
+        });
+
+        function banUser(name) {
+            if(confirm(`${name} কে ব্যান করতে চান?`)) socket.emit('admin-ban-user', name);
+        }
+
+        socket.on('user-banned', (name) => {
+            if(currentUser.username === name) {
+                alert("আপনাকে ব্যান করা হয়েছে!");
+                logout();
+            }
+        });
+
+        // --- মেসেজ লজিক ---
+        document.getElementById('chat-form').onsubmit = e => {
+            e.preventDefault();
+            const text = document.getElementById('msg-input').value;
+            if(!text) return;
+            const msgData = { 
+                user: currentUser.username, text, avatar: currentUser.avatar, 
+                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                msgId: Date.now().toString() 
+            };
+            appendMessage('আপনি', text, msgData.time, 'self-end', msgData.avatar);
+            socket.emit('chat-message', msgData);
+            document.getElementById('msg-input').value = '';
+        };
+
+        function appendMessage(user, content, time, align, avatar) {
+            const chat = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `flex w-full ${align === 'self-end' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div class="flex gap-2 max-w-[80%] ${align === 'self-end' ? 'flex-row-reverse' : ''}">
+                    <img src="${avatar}" class="w-8 h-8 rounded-full self-end">
+                    <div class="${align === 'self-end' ? 'bg-[#dcf8c6]' : 'bg-white'} p-3 rounded-2xl shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500">${user}</p>
+                        <p class="text-sm">${content}</p>
+                        <p class="text-[8px] text-right mt-1 text-gray-400">${time}</p>
+                    </div>
+                </div>`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        socket.on('chat-message', d => appendMessage(d.user, d.text, d.time, 'self-start', d.avatar));
+        socket.on('load-history', h => h.forEach(d => appendMessage(d.user === currentUser.username ? 'আপনি' : d.user, d.text, d.time, d.user === currentUser.username ? 'self-end' : 'self-start', d.avatar)));
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function editProfile() {
+            const newName = prompt("নতুন নাম দিন:", currentUser.username);
+            const newAvatar = prompt("প্রোফাইল পিকচার লিংক (URL) দিন:", currentUser.avatar);
+            // এখানে আপনি চাইলে API call করে ডাটাবেজে আপডেট করতে পারেন
+            alert("প্রোফাইল আপডেট হয়েছে (Refresh করুন)");
+        }
+    </script>
+</body>
+</html>
