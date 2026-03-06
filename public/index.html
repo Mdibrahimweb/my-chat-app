@@ -1,224 +1,129 @@
 <!DOCTYPE html>
 <html lang="bn">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Messenger Pro - Ibrahim & Lipa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Pro - Lite</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
     <style>
-        :root { --chat-bg-color: #e5ddd5; }
-        .dark { --chat-bg-color: #0b141a; }
-        body { height: 100dvh; }
-        #chat-window { flex: 1; background-color: var(--chat-bg-color); background-size: cover; background-position: center; background-attachment: fixed; }
-        .msg-bubble { max-width: 85%; position: relative; }
-        
-        /* প্রো ফিচার স্টাইল */
-        .seen-tick { font-size: 10px; margin-left: 3px; }
-        .reply-preview { background: rgba(0,0,0,0.05); border-left: 4px solid #128c7e; padding: 5px; margin-bottom: 5px; border-radius: 5px; font-size: 12px; }
-        #emoji-container { position: absolute; bottom: 85px; left: 20px; z-index: 100; display: none; }
-        .recording-active { color: #ef4444; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        
-        @media (max-width: 768px) {
-            #sidebar { position: fixed; left: -100%; z-index: 100; height: 100%; width: 280px; transition: 0.3s; }
-            #sidebar.active { left: 0; }
-            #overlay.active { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 90; }
-        }
+        #chat-window { height: calc(100vh - 130px); overflow-y: auto; background: #e5ddd5; }
+        .bubble { max-width: 80%; padding: 10px; border-radius: 15px; margin-bottom: 10px; }
+        .self { background: #dcf8c6; margin-left: auto; border-bottom-right-radius: 2px; }
+        .other { background: #ffffff; margin-right: auto; border-bottom-left-radius: 2px; }
     </style>
 </head>
+<body class="bg-gray-100 flex h-screen overflow-hidden">
 
-<body class="bg-gray-100 dark:bg-slate-950 font-sans flex overflow-hidden">
-    <div id="overlay" onclick="toggleSidebar()" class="hidden"></div>
-
-    <div id="sidebar" class="bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex flex-col shadow-2xl transition-all">
-        <div class="p-5 bg-[#128c7e] text-white flex justify-between items-center">
-            <h1 class="font-black">MESSENGER PRO</h1>
-            <button onclick="toggleSidebar()" class="md:hidden"><i class="fas fa-chevron-left"></i></button>
-        </div>
-        <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-        <div class="p-4 border-t dark:border-slate-800 space-y-3">
-            <button onclick="startVideoCall()" class="w-full flex items-center justify-between p-3 bg-blue-500 text-white rounded-xl font-medium">
-                <span>ভিডিও কল</span> <i class="fas fa-video"></i>
-            </button>
-            <button onclick="toggleTheme()" class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl dark:text-white font-medium">
-                <span>ডার্ক মোড</span> <i id="theme-icon" class="fas fa-moon"></i>
-            </button>
-            <label class="w-full flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-800 rounded-xl cursor-pointer dark:text-white font-medium">
-                <span>ব্যাকগ্রাউন্ড</span> <i class="fas fa-image"></i>
-                <input type="file" accept="image/*" class="hidden" onchange="setChatBackground(this)">
-            </label>
-            <button onclick="removeBackground()" class="w-full flex items-center justify-between p-3 bg-red-50 text-red-500 rounded-xl font-medium">
-                <span>মুছুন</span> <i class="fas fa-trash-alt"></i>
-            </button>
+    <div id="auth-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-sm shadow-2xl">
+            <h2 class="text-2xl font-bold text-[#128c7e] mb-6 text-center">MESSENGER PRO</h2>
+            <input id="auth-user" type="text" placeholder="ইউজারনেম" class="w-full border p-3 mb-3 rounded-xl outline-none focus:border-green-500">
+            <input id="auth-pass" type="password" placeholder="পাসওয়ার্ড" class="w-full border p-3 mb-4 rounded-xl outline-none focus:border-green-500">
+            <button onclick="handleAuth('login')" class="w-full bg-[#128c7e] text-white p-3 rounded-xl font-bold hover:bg-green-700 transition">লগইন</button>
+            <button onclick="handleAuth('reg')" class="w-full mt-3 text-sm text-gray-500 hover:underline">নতুন অ্যাকাউন্ট তৈরি করুন</button>
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col w-full relative h-full">
-        <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-4 justify-between border-b dark:border-slate-800 sticky top-0 z-10 shrink-0">
+    <div class="hidden md:flex w-72 bg-white border-r flex-col">
+        <div class="p-4 bg-[#075e54] text-white font-bold">সক্রিয় ইউজার</div>
+        <div id="user-list" class="p-4 space-y-2"></div>
+    </div>
+
+    <div class="flex-1 flex flex-col">
+        <header class="h-16 bg-[#075e54] text-white flex items-center px-4 justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="text-[#128c7e] md:hidden"><i class="fas fa-bars"></i></button>
-                <div>
-                    <h2 class="font-bold dark:text-white">Messenger Pro</h2>
-                    <p id="typing-status" class="text-[10px] text-green-500 font-bold italic"></p>
-                </div>
+                <i class="fas fa-circle text-green-400 text-[10px]"></i>
+                <h2 id="my-name" class="font-bold">লোড হচ্ছে...</h2>
             </div>
-            <div class="flex gap-4 items-center">
-                <i class="fas fa-phone text-[#128c7e] cursor-pointer"></i>
-                <i class="fas fa-video text-[#128c7e] cursor-pointer" onclick="startVideoCall()"></i>
-                <div id="current-user-tag" class="text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold"></div>
-            </div>
+            <button onclick="logout()" class="text-sm bg-red-500 px-3 py-1 rounded">লগআউট</button>
         </header>
 
-        <div id="reply-box" class="hidden px-4 py-2 bg-gray-200 dark:bg-slate-800 border-l-4 border-[#128c7e] flex justify-between items-center">
-            <div id="reply-text" class="text-xs truncate italic"></div>
-            <button onclick="cancelReply()"><i class="fas fa-times text-gray-500"></i></button>
-        </div>
+        <div id="chat-window" class="p-4 flex flex-col"></div>
 
-        <div id="chat-window" class="p-4 overflow-y-auto flex flex-col space-y-4"></div>
-
-        <div id="emoji-container">
-            <emoji-picker class="light"></emoji-picker>
-        </div>
-
-        <form id="chat-form" class="h-20 bg-white dark:bg-slate-900 flex items-center px-4 gap-2 border-t dark:border-slate-800 shrink-0 relative">
-            <button type="button" onclick="toggleEmoji()" class="text-gray-400 text-xl"><i class="far fa-smile"></i></button>
-            <button type="button" onclick="document.getElementById('file-input').click()" class="text-gray-400 text-xl"><i class="fas fa-paperclip"></i></button>
-            
-            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSend(this)">
-            
-            <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 bg-gray-100 dark:bg-slate-800 dark:text-white rounded-2xl py-3 px-4 focus:outline-none text-sm">
-            
-            <button type="button" id="voice-btn" onmousedown="startRecording()" onmouseup="stopRecording()" class="text-gray-400 text-xl px-2">
-                <i class="fas fa-microphone"></i>
+        <div class="p-3 bg-white border-t flex gap-2 items-center">
+            <input id="msg-input" type="text" placeholder="মেসেজ লিখুন..." class="flex-1 bg-gray-100 border p-3 rounded-full outline-none px-5">
+            <button onclick="sendMsg()" class="bg-[#128c7e] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition">
+                <i class="fas fa-paper-plane"></i>
             </button>
-
-            <button type="submit" class="bg-[#128c7e] text-white w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-paper-plane text-sm"></i></button>
-        </form>
+        </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const chatWindow = document.getElementById('chat-window');
-        const msgInput = document.getElementById('msg-input');
-        const replyBox = document.getElementById('reply-box');
-        let selectedReplyId = null;
-        let isEditing = false;
-        let editingMsgId = null;
+        let currentUser = JSON.parse(localStorage.getItem('messenger-user'));
 
-        // --- ১. ইমোজি পিকার ---
-        function toggleEmoji() {
-            const container = document.getElementById('emoji-container');
-            container.style.display = container.style.display === 'block' ? 'none' : 'block';
+        if (currentUser) {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('my-name').innerText = currentUser.username;
+            socket.emit('join', currentUser);
         }
-        document.querySelector('emoji-picker').addEventListener('emoji-click', event => {
-            msgInput.value += event.detail.unicode;
-        });
 
-        // --- ২. ভয়েস মেসেজ (বেসিক লজিক) ---
-        let mediaRecorder;
-        let audioChunks = [];
-        async function startRecording() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            document.getElementById('voice-btn').classList.add('recording-active');
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.start();
+        async function handleAuth(type) {
+            const username = document.getElementById('auth-user').value;
+            const pass = document.getElementById('auth-pass').value;
+            if(!username || !pass) return alert("সব ঘর পূরণ করুন!");
+
+            const res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, pass, type, avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' })
+            });
+            
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            
+            localStorage.setItem('messenger-user', JSON.stringify(data));
+            location.reload();
         }
-        function stopRecording() {
-            if(!mediaRecorder) return;
-            mediaRecorder.stop();
-            document.getElementById('voice-btn').classList.remove('recording-active');
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                // এখানে আপনি ব্লবটি সার্ভারে পাঠাতে পারেন
-                alert("ভয়েস রেকর্ড হয়েছে! (সার্ভার আপলোড ফিচার প্রয়োজন)");
-                audioChunks = [];
+
+        function append(user, text, isSelf, time) {
+            const win = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `bubble ${isSelf ? 'self shadow-md' : 'other shadow-sm border'}`;
+            div.innerHTML = `
+                <div class="text-[10px] font-bold ${isSelf ? 'text-green-700' : 'text-blue-600'} mb-1">${user}</div>
+                <div class="text-sm text-gray-800">${text}</div>
+                <div class="text-[9px] text-gray-400 text-right mt-1">${time}</div>
+            `;
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function sendMsg() {
+            const input = document.getElementById('msg-input');
+            if (!input.value.trim()) return;
+
+            const data = {
+                user: currentUser.username,
+                text: input.value,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                avatar: currentUser.avatar
             };
+
+            append('আপনি', data.text, true, data.time);
+            socket.emit('chat-message', data);
+            input.value = '';
         }
 
-        // --- ৩. মেসেজ রিপ্লাই ও এডিট ---
-        function setReply(id, text) {
-            selectedReplyId = id;
-            document.getElementById('reply-text').innerText = "রিপ্লাই: " + text;
-            replyBox.classList.remove('hidden');
-        }
-        function cancelReply() {
-            selectedReplyId = null;
-            replyBox.classList.add('hidden');
-        }
+        function logout() { localStorage.clear(); location.reload(); }
 
-        function editMsg(id, oldText) {
-            isEditing = true;
-            editingMsgId = id;
-            msgInput.value = oldText;
-            msgInput.focus();
-        }
-
-        // --- ৪. মেসেজ অ্যাপেন্ড (নতুন ফিচার সহ) ---
-        function appendMessage(user, content, time, align, isFile, msgId, avatar, replyTo = null) {
-            const isSelf = align === 'self-end';
-            const wrapper = document.createElement('div');
-            wrapper.className = `flex w-full ${isSelf ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`;
-            wrapper.id = `msg-${msgId}`;
-
-            wrapper.innerHTML = `
-                <div class="flex gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'} items-end msg-bubble group">
-                    <img src="${avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="w-8 h-8 rounded-full">
-                    <div class="relative ${isSelf ? 'bg-[#dcf8c6] dark:bg-[#054740]' : 'bg-white dark:bg-slate-800'} p-3 rounded-2xl shadow-sm border dark:border-slate-700">
-                        ${replyTo ? `<div class="reply-preview">${replyTo}</div>` : ''}
-                        <p class="text-[10px] font-black ${isSelf ? 'text-green-700' : 'text-gray-500'} mb-1">${user}</p>
-                        <p class="text-sm dark:text-gray-100">${content}</p>
-                        <div class="flex items-center justify-end gap-1 mt-1">
-                            <span class="text-[9px] text-gray-400">${time}</span>
-                            ${isSelf ? '<i class="fas fa-check-double seen-tick text-blue-500"></i>' : ''}
-                        </div>
-                        <div class="absolute -top-2 ${isSelf ? '-left-10' : '-right-10'} hidden group-hover:flex gap-2 bg-white dark:bg-slate-700 shadow-lg p-1 rounded-lg z-20">
-                            <button onclick="setReply('${msgId}', '${content}')" class="text-xs p-1"><i class="fas fa-reply"></i></button>
-                            ${isSelf ? `<button onclick="editMsg('${msgId}', '${content}')" class="text-xs p-1"><i class="fas fa-edit"></i></button>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-            chatWindow.appendChild(wrapper);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        // --- ৫. ভিডিও কল স্টার্ট ---
-        function startVideoCall() {
-            alert("ভিডিও কল শুরু হচ্ছে... (WebRTC কানেকশন প্রয়োজন)");
-            // এখানে আপনি জুটসি বা পিয়ার জেএস ইন্টিগ্রেট করতে পারেন
-        }
-
-        // আপনার আগের সকেট ফাংশনগুলো এখানে থাকবে...
-        document.getElementById('chat-form').onsubmit = e => {
-            e.preventDefault();
-            const msg = msgInput.value.trim();
-            if (msg) {
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const msgId = Date.now().toString();
-                
-                if(isEditing) {
-                    socket.emit('edit-message', { id: editingMsgId, newText: msg });
-                    isEditing = false;
-                } else {
-                    appendMessage('আপনি', msg, time, 'self-end', false, msgId, localStorage.getItem('chat-avatar'), selectedReplyId ? document.getElementById('reply-text').innerText : null);
-                    socket.emit('chat-message', { user: localStorage.getItem('chat-user'), text: msg, time, msgId, replyTo: selectedReplyId });
-                }
-                
-                msgInput.value = '';
-                cancelReply();
-                document.getElementById('emoji-container').style.display = 'none';
-            }
-        };
-
-        // সকেট লিসেনার্স (Seen, Typing etc)
-        socket.on('message-seen', (id) => {
-            const msg = document.getElementById(`msg-${id}`);
-            if(msg) msg.querySelector('.seen-tick').classList.add('text-blue-500');
+        // সকেট লিসেনার্স
+        socket.on('chat-message', d => append(d.user, d.text, false, d.time));
+        socket.on('load-history', h => h.forEach(d => append(d.user === currentUser.username ? 'আপনি' : d.user, d.text, d.user === currentUser.username, d.time)));
+        
+        socket.on('user-list', users => {
+            document.getElementById('user-list').innerHTML = users.map(u => `
+                <div class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span class="text-sm font-medium">${u.username}</span>
+                </div>
+            `).join('');
         });
+
+        // Enter key support
+        document.getElementById('msg-input').onkeypress = (e) => { if(e.key === 'Enter') sendMsg(); };
     </script>
 </body>
 </html>
