@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Pro - Ibrahim</title>
+    <title>Messenger Pro - Ibrahim</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -16,7 +16,6 @@
         .other { background: #ffffff; align-self: flex-start; border-top-left-radius: 2px; }
         .menu-btn { display: none; }
         .bubble:hover .menu-btn { display: block; }
-        .swal2-popup { border-radius: 20px !important; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row overflow-hidden">
@@ -63,7 +62,13 @@
     </div>
 
     <script>
-        const socket = io();
+        // সকেট কনফিগারেশন - মোবাইল ব্যাকগ্রাউন্ডে ভালো কাজ করার জন্য
+        const socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000
+        });
+
         let me = JSON.parse(localStorage.getItem('m-user'));
         let isEdit = false, editId = null;
 
@@ -72,10 +77,22 @@
             showConfirmButton: false, timer: 3000, timerProgressBar: true
         });
 
-        // ১. নোটিফিকেশন পারমিশন চাওয়া
-        if ("Notification" in window) {
-            Notification.requestPermission();
+        // ১. সার্ভিস ওয়ার্কার রেজিস্ট্রেশন (নোটিফিকেশন এর জন্য জরুরি)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW Registered'))
+                .catch(err => console.log('SW Registration failed', err));
+            });
         }
+
+        // ২. নোটিফিকেশন পারমিশন চাওয়া
+        function askPermission() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        }
+        askPermission();
 
         if (me) { 
             document.getElementById('auth-modal').remove(); 
@@ -119,20 +136,27 @@
             win.appendChild(div);
             win.scrollTop = win.scrollHeight;
 
-            // ২. ব্যাকগ্রাউন্ডে থাকলে নোটিফিকেশন পাঠানো
-            if (!isSelf && document.hidden) {
-                showNotification(u, isImg ? "একটি ছবি পাঠিয়েছেন" : t);
+            // ৩. উন্নত নোটিফিকেশন লজিক
+            if (!isSelf && (document.hidden || !document.hasFocus())) {
+                playNotifSound();
+                showWebNotification(u, isImg ? "একটি ছবি পাঠিয়েছেন" : t);
             }
         }
 
-        function showNotification(sender, message) {
+        function showWebNotification(sender, message) {
             if (Notification.permission === "granted") {
-                const notif = new Notification(`নতুন মেসেজ: ${sender}`, {
+                const options = {
                     body: message,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
-                });
-                notif.onclick = () => { window.focus(); notif.close(); };
+                    icon: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+                    vibrate: [200, 100, 200]
+                };
+                new Notification(`নতুন মেসেজ: ${sender}`, options);
             }
+        }
+
+        function playNotifSound() {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+            audio.play().catch(e => console.log("Sound play blocked"));
         }
 
         function send() {
@@ -165,7 +189,7 @@
 
         function delMsg(id) {
             Swal.fire({
-                title: 'মুছে ফেলবেন?', text: "এটি আর ফিরে পাওয়া যাবে না!", icon: 'warning',
+                title: 'মুছে ফেলবেন?', text: "এটি আর ফিরে পাওয়া যাবে না!", icon: 'warning',
                 showCancelButton: true, confirmButtonColor: '#128c7e', confirmButtonText: 'হ্যাঁ, মুছুন'
             }).then((res) => { if (res.isConfirmed) socket.emit('delete-msg', id); });
         }
